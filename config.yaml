@@ -1,0 +1,6 @@
+server:
+  port: 9999
+cloudflare:
+  base_url: https://api.cloudflare.com/client/v4/
+  account_id: ""
+  token: ""
