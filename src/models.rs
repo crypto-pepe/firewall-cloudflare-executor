@@ -59,10 +59,10 @@ impl Nongrata {
     ) -> Self {
         Self {
             restriction_type: req.type_field,
-            reason: reason,
+            reason,
             restriction_value: req.value,
             expires_at: ttl,
-            is_global: is_global,
+            is_global,
         }
     }
 }
