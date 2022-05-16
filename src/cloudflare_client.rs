@@ -4,6 +4,7 @@ use crate::errors;
 use crate::models;
 use anyhow::Result;
 use reqwest::{header, Client};
+use tracing::{error, info};
 
 #[derive(Clone)]
 pub struct CloudflareClient {
@@ -41,6 +42,9 @@ impl CloudflareClient {
                 value: ip.to_string(),
             },
         })?;
+
+        info!("Will ban {:?}, zone_id: {:?}", ip, self.zone_id);
+
         let resp = self
             .c
             .post(self.base_api_url.to_owned().add(path.as_str()))
@@ -50,6 +54,7 @@ impl CloudflareClient {
             .json::<models::AccessRuleResponse>()
             .await?;
         if !resp.success {
+            error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
         Ok(())
@@ -68,6 +73,9 @@ impl CloudflareClient {
                 value: ip.to_string(),
             },
         })?;
+
+        info!("Will ban {:?} globally", ip);
+
         let resp = self
             .c
             .post(self.base_api_url.to_owned().add(path.as_str()))
@@ -77,6 +85,7 @@ impl CloudflareClient {
             .json::<models::AccessRuleResponse>()
             .await?;
         if !resp.success {
+            error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
         Ok(())
@@ -95,6 +104,9 @@ impl CloudflareClient {
                 value: user_agent.to_string(),
             },
         })?;
+
+        info!("Will ban {:?} globally", user_agent);
+
         let resp = self
             .c
             .post(self.base_api_url.to_owned().add(path.as_str()))
@@ -104,6 +116,7 @@ impl CloudflareClient {
             .json::<models::AccessRuleResponse>()
             .await?;
         if !resp.success {
+            error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
         Ok(())

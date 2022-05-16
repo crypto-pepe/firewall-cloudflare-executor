@@ -8,12 +8,18 @@ use crate::cloudflare_client::CloudflareClient;
 pub struct Settings {
     pub server: ServerConfig,
     pub cloudflare: CloudflareClientConfig,
+    pub db: DbConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+impl ServerConfig {
+    pub fn get_address(self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -24,12 +30,28 @@ pub struct CloudflareClientConfig {
     token: String,
 }
 
-pub fn get_config(path: &str) -> Result<Settings, ConfigError> {
-    pepe_config::load(path, config::FileFormat::Json)
-}
-
 impl CloudflareClientConfig {
     pub fn client(self) -> CloudflareClient {
         CloudflareClient::new(self.base_url, self.token, self.account_id, self.zone_id)
     }
+}
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DbConfig {
+    user: String,
+    password: String,
+    db: String,
+    host: String,
+    port: String,
+}
+impl DbConfig {
+    pub fn pg_conn_string(self) -> String {
+        format!(
+            "postgres://{}:{}@{}/{}",
+            self.user, self.password, self.host, self.db
+        )
+    }
+}
+pub fn get_config(path: &str) -> Result<Settings, ConfigError> {
+    pepe_config::load(path, config::FileFormat::Json)
 }
