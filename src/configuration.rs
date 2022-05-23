@@ -1,14 +1,16 @@
-use config::ConfigError;
 use pepe_config;
 use serde::{Deserialize, Serialize};
 
 use crate::cloudflare_client::CloudflareClient;
+
+pub const DEFAULT_CFG_PATH: &str = "./config.yaml";
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {
     pub server: ServerConfig,
     pub cloudflare: CloudflareClientConfig,
     pub db: DbConfig,
+    pub tracing: TracingConfig,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -32,7 +34,7 @@ pub struct CloudflareClientConfig {
 
 impl CloudflareClientConfig {
     pub fn client(self) -> CloudflareClient {
-        CloudflareClient::new(self.base_url, self.token, self.account_id, self.zone_id)
+        CloudflareClient::new(self.base_url, self.token, self.zone_id)
     }
 }
 
@@ -52,6 +54,12 @@ impl DbConfig {
         )
     }
 }
-pub fn get_config(path: &str) -> Result<Settings, ConfigError> {
-    pepe_config::load(path, config::FileFormat::Json)
+pub fn get_config(path: &str) -> Result<Settings, pepe_config::ConfigError> {
+    pepe_config::load(path, pepe_config::FileFormat::Yaml)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TracingConfig {
+    pub svc_name: String,
+    pub jaeger_endpoint: Option<String>,
 }
