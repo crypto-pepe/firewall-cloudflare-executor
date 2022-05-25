@@ -1,10 +1,9 @@
-use crate::cloudflare_client::CloudflareClient;
 use crate::configuration;
+use crate::executor;
 use crate::handlers;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
-use bb8::ManageConnection;
 use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use diesel::PgConnection;
 use std::net::TcpListener;
@@ -32,8 +31,16 @@ impl Application {
         let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
 
+        let executor_service_op = executor::ExecutorService::new(cloudflare_client, pool);
+        let executor_service_dry = executor::ExecutorServiceDry::new();
         let port = listener.local_addr()?.port();
-        let server = run(listener, cloudflare_client, pool, log_level_handle).await?;
+        let server = run(
+            listener,
+            log_level_handle,
+            executor_service_op.clone(),
+            executor_service_dry.clone(),
+        )
+        .await?;
         info!("server is running on: {:?}", server_addr);
         Ok(Self { port, server })
     }
@@ -46,26 +53,28 @@ impl Application {
         self.server.await
     }
 }
-async fn run<T: ManageConnection>(
+async fn run(
     listener: TcpListener,
-    client: CloudflareClient,
-    db_pool: bb8::Pool<T>,
     log_level_handle: Handle<EnvFilter, Formatter>,
+    executor_service_op: executor::ExecutorService,
+    executor_service_dry: executor::ExecutorServiceDry,
 ) -> Result<Server, std::io::Error> {
     let is_dry = web::Data::new(AtomicBool::new(false));
-    let log_level = web::Data::new(log_level_handle);
 
     let server = HttpServer::new(move || {
         App::new()
             .wrap(TracingLogger::default())
             .route("/healthcheck", web::get().to(handlers::healthcheck))
-            .route("/api/bans", web::post().to(handlers::ban))
-            .route("/api/bans", web::delete().to(handlers::unban))
-            .route("/api/dry", web::post().to(handlers::config))
-            .app_data(client.clone())
-            .app_data(db_pool.clone())
-            .app_data(is_dry.clone())
-            .app_data(log_level.clone())
+            .route("/api/config", web::post().to(handlers::config))
+            .route(
+                "/api/bans",
+                web::delete().to(executor::ban_according_to_mode),
+            )
+            .route("/api/bans", web::post().to(executor::ban_according_to_mode))
+            .app_data(web::Data::new(log_level_handle.clone()))
+            .app_data(web::Data::new(executor_service_op.clone()))
+            .app_data(web::Data::new(executor_service_dry.clone()))
+            .app_data(web::Data::new(is_dry.clone()))
     })
     .listen(listener)?
     .run();

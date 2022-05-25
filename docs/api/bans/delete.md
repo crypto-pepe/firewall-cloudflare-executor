@@ -10,9 +10,9 @@ Unbans all targets or target with provided details.
 
 **Content-Type**: `application/json`
 
-| Field    | Type                                              | Is required | Note                                              |
-|----------|---------------------------------------------------|-------------|---------------------------------------------------|
-| `target` | `{ ip: string?, user-agent:string? } \| "*"` | Yes         | Ban target. If target is "*" - unbans all targets |
+| Field    | Type                                        | Is required | Note                                              |
+|----------|---------------------------------------------|------------|---------------------------------------------------|
+| `target` | `{ ip: string?, user_agent:string? } \| '*'`       | Yes         | Ban target. If target is "*" - unbans all targets |
 
 **Request examples**
 
@@ -20,7 +20,7 @@ Unbans all targets or target with provided details.
 {
     "target": {
         "ip": "11.12.13.14",
-        "user-agent": "curl user-agent"
+        "user_agent": "curl user-agent"
     }
 }
 ```

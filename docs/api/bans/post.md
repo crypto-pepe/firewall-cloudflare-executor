@@ -14,10 +14,10 @@ Bans target with provided details.
 
 **Content-Type**: `application/json`
 
-| Field    | Type                                  | Is required | Note               |
-|----------|---------------------------------------|-------------|--------------------|
-| `target` | `{ ip: string?, user-agent:string? }` | Yes         | Ban target         | 
-| `reason` | `string`                              | Yes         | Ban reason         |
+| Field    | Type                                  | Is required | Note                |
+|----------|---------------------------------------|-------------|---------------------|
+| `target` | `{ ip: string?, user_agent:string? }` | Yes         | Ban target          | 
+| `reason` | `string`                              | Yes         | Ban reason          |
 | `ttl`    | `number`                              | Yes         | Ban TTL, in seconds |
 
 **Request examples**
@@ -26,7 +26,7 @@ Bans target with provided details.
 {
     "target": {
         "ip": "11.12.13.14",
-        "user-agent": "curl user-agent"
+        "user_agent": "curl user-agent"
     },
     "reason": "Exceeded requests per minute limit, excess 2.0",
     "ttl": 300

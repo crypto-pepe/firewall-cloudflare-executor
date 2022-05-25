@@ -633,7 +633,6 @@ dependencies = [
  "dotenv",
  "futures",
  "lazy_static",
- "log",
  "opentelemetry",
  "opentelemetry-jaeger",
  "pepe-config",
