@@ -1,5 +1,6 @@
 use crate::cloudflare_client;
 use crate::errors;
+use crate::errors::ServerError;
 use crate::executor::*;
 use crate::handlers;
 use crate::models;
@@ -32,7 +33,14 @@ impl ExecutorService {
         info!("Incoming request:{:?}", block_request.clone());
 
         let conn: PooledConnection<DieselConnectionManager<DieselConnection<PgConnection>>> =
-            self.db_pool.get().await.unwrap();
+            match self.db_pool.get().await {
+                Ok(v) => v,
+                Err(e) => {
+                    return Some(ServerError::WrappedErr {
+                        cause: e.to_string(),
+                    })
+                }
+            };
         let mut rule_id = String::from("");
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
@@ -67,18 +75,31 @@ impl ExecutorService {
             Err(e) => return Some(handlers::models::wrap_err(e)),
         };
         nongrata.rule_id = rule_id;
-        diesel::insert_into(schema::nongratas::table)
+        match diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
             .execute(&*conn)
-            .unwrap();
-        None
+        {
+            Ok(_) => return None,
+            Err(e) => {
+                return Some(ServerError::WrappedErr {
+                    cause: e.to_string(),
+                })
+            }
+        };
     }
 
     pub async fn unban(&self, unblock_request: UnblockRequest) -> Option<errors::ServerError> {
         info!("Incoming request:{:?}", unblock_request.clone());
 
         let conn: PooledConnection<DieselConnectionManager<DieselConnection<PgConnection>>> =
-            self.db_pool.get().await.unwrap();
+            match self.db_pool.get().await {
+                Ok(v) => v,
+                Err(e) => {
+                    return Some(ServerError::WrappedErr {
+                        cause: e.to_string(),
+                    })
+                }
+            };
         let rule = unblock_request.clone();
         let firewall_rule = match models::form_firewall_rule_expression(
             rule.target.ip.clone(),
@@ -87,11 +108,18 @@ impl ExecutorService {
             Some(r) => r,
             None => return Some(errors::ServerError::EmptyRequest),
         };
-        let rule_id = schema::nongratas::table
+        let rule_id = match schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)
             .first::<String>(&*conn)
-            .unwrap();
+        {
+            Ok(id) => id,
+            Err(e) => {
+                return Some(ServerError::WrappedErr {
+                    cause: e.to_string(),
+                })
+            }
+        };
         if let Err(e) = self
             .client
             .restrict_rule(
@@ -103,9 +131,15 @@ impl ExecutorService {
         {
             return Some(handlers::models::wrap_err(e));
         };
-        diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
+        match diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
             .execute(&*conn)
-            .unwrap();
-        None
+        {
+            Ok(_) => return None,
+            Err(e) => {
+                return Some(ServerError::WrappedErr {
+                    cause: e.to_string(),
+                })
+            }
+        };
     }
 }

@@ -28,7 +28,11 @@ pub fn get_subscriber(
     let reg = sb.with(JsonStorageLayer).with(formatting_layer);
 
     if cfg.tracing.jaeger_endpoint.is_some() {
-        let ep = cfg.tracing.jaeger_endpoint.as_ref().unwrap();
+        let ep = cfg
+            .tracing
+            .jaeger_endpoint
+            .as_ref()
+            .expect("tracing cfg error");
         let tracer = init_tracer(cfg.tracing.svc_name.to_string(), ep.into());
         (
             Box::new(reg.with(tracing_opentelemetry::layer().with_tracer(tracer))),

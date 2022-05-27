@@ -1,6 +1,7 @@
 use std::ops::Add;
 
 use crate::errors;
+use crate::errors::ServerError;
 use crate::models;
 use anyhow::Result;
 use reqwest::{header, Client};
@@ -18,10 +19,14 @@ impl CloudflareClient {
         let mut hmap = header::HeaderMap::new();
         hmap.insert(
             header::AUTHORIZATION,
-            header::HeaderValue::from_str(["Bearer", token.as_str()].join(" ").as_str()).unwrap(),
+            header::HeaderValue::from_str(["Bearer", token.as_str()].join(" ").as_str())
+                .expect("can't initialize client: token problem"),
         );
         Self {
-            c: Client::builder().default_headers(hmap).build().unwrap(),
+            c: Client::builder()
+                .default_headers(hmap)
+                .build()
+                .expect("can't initialize client"),
             base_api_url,
             zone_id,
         }
@@ -68,6 +73,15 @@ impl CloudflareClient {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
-        Ok(resp.result.first().unwrap().id.clone())
+        let value = match resp.result.first() {
+            Some(v) => v,
+            None => {
+                return Err(ServerError::WrappedErr {
+                    cause: String::from("bad response"),
+                }
+                .into())
+            }
+        };
+        Ok(value.id.clone())
     }
 }

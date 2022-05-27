@@ -11,6 +11,8 @@ pub enum ServerError {
     WrappedErr { cause: String },
     #[error("Empty request")]
     EmptyRequest,
+    #[error("DB error")]
+    DBError,
 }
 
 impl From<ServerError> for HttpResponse {
@@ -20,6 +22,7 @@ impl From<ServerError> for HttpResponse {
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
             ServerError::EmptyRequest => HttpResponse::Ok().finish(),
+            ServerError::DBError => HttpResponse::InternalServerError().finish(),
         }
     }
 }
