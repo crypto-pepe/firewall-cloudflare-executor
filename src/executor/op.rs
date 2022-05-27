@@ -79,13 +79,11 @@ impl ExecutorService {
             .values(nongrata)
             .execute(&*conn)
         {
-            Ok(_) => return None,
-            Err(e) => {
-                return Some(ServerError::WrappedErr {
-                    cause: e.to_string(),
-                })
-            }
-        };
+            Ok(_) => None,
+            Err(e) => Some(ServerError::WrappedErr {
+                cause: e.to_string(),
+            }),
+        }
     }
 
     pub async fn unban(&self, unblock_request: UnblockRequest) -> Option<errors::ServerError> {
@@ -134,12 +132,10 @@ impl ExecutorService {
         match diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
             .execute(&*conn)
         {
-            Ok(_) => return None,
-            Err(e) => {
-                return Some(ServerError::WrappedErr {
-                    cause: e.to_string(),
-                })
-            }
-        };
+            Ok(_) => None,
+            Err(e) => Some(ServerError::WrappedErr {
+                cause: e.to_string(),
+            }),
+        }
     }
 }
