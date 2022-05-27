@@ -1,6 +1,6 @@
 table! {
     nongratas (id) {
-        id -> Int4,
+        id -> Int8,
         rule_id -> Text,
         reason -> Text,
         restriction_type -> Text,

@@ -1,4 +1,4 @@
-prog :=xnixperms
+prog :=firewall_cloudflare_executor
 
 debug ?=
 

@@ -71,6 +71,10 @@ async fn run(
                 web::delete().to(executor::ban_according_to_mode),
             )
             .route("/api/bans", web::post().to(executor::ban_according_to_mode))
+            .route(
+                "/api/bans",
+                web::delete().to(executor::unban_according_to_mode),
+            )
             .app_data(web::Data::new(log_level_handle.clone()))
             .app_data(web::Data::new(executor_service_op.clone()))
             .app_data(web::Data::new(executor_service_dry.clone()))

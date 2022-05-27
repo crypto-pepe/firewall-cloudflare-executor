@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cloudflare_client::CloudflareClient;
 
-pub const DEFAULT_CFG_PATH: &str = "./config.yaml";
+pub const DEFAULT_CFG_PATH: &str = include_str!("../config.yaml");
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Settings {

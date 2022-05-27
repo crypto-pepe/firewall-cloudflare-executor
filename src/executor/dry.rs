@@ -1,7 +1,6 @@
 use crate::errors;
-use crate::handlers;
-
-use actix_web::{web, HttpResponse};
+use crate::errors::ServerError;
+use crate::executor::*;
 
 use tracing::{error, info};
 
@@ -11,44 +10,44 @@ impl ExecutorServiceDry {
     pub fn new() -> Self {
         Self {}
     }
-    pub async fn ban(
-        &self,
-        req: web::Json<handlers::models::BlockRequest>,
-    ) -> Result<HttpResponse, errors::ServerError> {
-        info!("Incoming request:{:?}", req.clone());
-        match req.target.ip.clone() {
-            Some(ip) => match req.target.ua.clone() {
+    pub async fn ban(&self, block_request: BlockRequest) -> Option<errors::ServerError> {
+        info!("Incoming request:{:?}", block_request);
+        match block_request.target.ip.clone() {
+            Some(ip) => match block_request.target.ua {
                 Some(ua) => info!("gonna ban {:?}{:?}", ua, ip),
                 None => info!("gonna ban {:?} by IP", ip),
             },
-            None => match req.target.ua.clone() {
+            None => match block_request.target.ua {
                 Some(ua) => info!("gonna ban {:?}", ua),
                 None => {
                     error!("Empty request");
-                    return Ok(HttpResponse::BadRequest().finish());
+                    return Some(ServerError::EmptyRequest);
                 }
             },
         }
-        Ok(HttpResponse::NoContent().finish())
+        None
     }
-    pub async fn unban(
-        &self,
-        req: web::Json<handlers::models::UnblockRequest>,
-    ) -> Result<HttpResponse, errors::ServerError> {
-        info!("Incoming request:{:?}", req.clone());
-        match req.target.ip.clone() {
-            Some(ip) => match req.target.ua.clone() {
+    pub async fn unban(&self, unblock_request: UnblockRequest) -> Option<errors::ServerError> {
+        info!("Incoming request:{:?}", unblock_request);
+        match unblock_request.target.ip.clone() {
+            Some(ip) => match unblock_request.target.ua {
                 Some(ua) => info!("gonna unban {:?}{:?}", ua, ip),
                 None => info!("gonna unban {:?} by IP", ip),
             },
-            None => match req.target.ua.clone() {
+            None => match unblock_request.target.ua {
                 Some(ua) => info!("gonna unban {:?}", ua),
                 None => {
                     error!("Empty request");
-                    return Ok(HttpResponse::BadRequest().finish());
+                    return Some(ServerError::EmptyRequest);
                 }
             },
         }
-        Ok(HttpResponse::NoContent().finish())
+        None
+    }
+}
+
+impl Default for ExecutorServiceDry {
+    fn default() -> Self {
+        Self::new()
     }
 }
