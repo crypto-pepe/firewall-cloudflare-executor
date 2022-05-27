@@ -1,6 +1,7 @@
 use crate::configuration;
 use crate::executor;
 use crate::handlers;
+use crate::handlers::bans;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
@@ -66,15 +67,8 @@ async fn run(
             .wrap(TracingLogger::default())
             .route("/healthcheck", web::get().to(handlers::healthcheck))
             .route("/api/config", web::post().to(handlers::config))
-            .route(
-                "/api/bans",
-                web::delete().to(executor::ban_according_to_mode),
-            )
-            .route("/api/bans", web::post().to(executor::ban_according_to_mode))
-            .route(
-                "/api/bans",
-                web::delete().to(executor::unban_according_to_mode),
-            )
+            .route("/api/bans", web::post().to(bans::ban_according_to_mode))
+            .route("/api/bans", web::delete().to(bans::unban_according_to_mode))
             .app_data(web::Data::new(log_level_handle.clone()))
             .app_data(web::Data::new(executor_service_op.clone()))
             .app_data(web::Data::new(executor_service_dry.clone()))

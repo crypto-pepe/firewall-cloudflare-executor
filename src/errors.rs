@@ -13,9 +13,9 @@ pub enum ServerError {
     EmptyRequest,
 }
 
-impl ServerError {
-    pub fn form_http_response(&self) -> HttpResponse {
-        match self {
+impl From<ServerError> for HttpResponse {
+    fn from(v: ServerError) -> Self {
+        match v {
             ServerError::Unsuccessfull { info } => HttpResponse::BadGateway().json(info),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
