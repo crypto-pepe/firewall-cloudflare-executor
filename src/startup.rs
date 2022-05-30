@@ -49,7 +49,6 @@ impl Application {
     pub fn port(&self) -> u16 {
         self.port
     }
-
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
         self.server.await
     }
