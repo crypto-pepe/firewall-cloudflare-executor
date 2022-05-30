@@ -58,7 +58,7 @@ impl Executor for ExecutorService {
                 models::RestrictionType::Block,
             )
             .await
-            .map_err(|e| errors::wrap_err(e))?;
+            .map_err(errors::wrap_err)?;
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
