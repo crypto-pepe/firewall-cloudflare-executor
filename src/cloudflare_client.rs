@@ -9,7 +9,7 @@ use tracing::{error, info};
 
 #[derive(Clone)]
 pub struct CloudflareClient {
-    c: Client,
+    http_client: Client,
     base_api_url: String,
     zone_id: String,
 }
@@ -23,7 +23,7 @@ impl CloudflareClient {
                 .expect("can't initialize client: token problem"),
         );
         Self {
-            c: Client::builder()
+            http_client: Client::builder()
                 .default_headers(hmap)
                 .build()
                 .expect("can't initialize client"),
@@ -38,17 +38,15 @@ impl CloudflareClient {
         ua: Option<String>,
         restriction_type: models::RestrictionType,
     ) -> Result<String> {
-        let expr = match models::form_firewall_rule_expression(ip.clone(), ua.clone()) {
-            Some(expr) => expr,
-            None => return Err(errors::ServerError::EmptyRequest.into()),
-        };
+        let expr = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref())
+            .ok_or::<errors::ServerError>(errors::ServerError::EmptyRequest)?;
         info!(
             "Will {}: {}\n globally",
             match restriction_type {
                 models::RestrictionType::Unblock(_) => "unblock",
                 _ => "block",
             },
-            expr.clone(),
+            expr,
         );
 
         let req = serde_json::to_string(&models::FirewallRuleRequest {
@@ -59,9 +57,11 @@ impl CloudflareClient {
 
         let builder = match restriction_type {
             models::RestrictionType::Unblock(_) => self
-                .c
+                .http_client
                 .delete(self.base_api_url.to_owned().add(path.as_str())),
-            _ => self.c.post(self.base_api_url.to_owned().add(path.as_str())),
+            _ => self
+                .http_client
+                .post(self.base_api_url.to_owned().add(path.as_str())),
         };
         let resp = builder
             .body(req)

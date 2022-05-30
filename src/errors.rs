@@ -28,3 +28,9 @@ impl From<ServerError> for HttpResponse {
 }
 
 impl actix_web::error::ResponseError for ServerError {}
+
+pub fn wrap_err(e: anyhow::Error) -> ServerError {
+    return ServerError::WrappedErr {
+        cause: format!("cause : {}", e),
+    };
+}
