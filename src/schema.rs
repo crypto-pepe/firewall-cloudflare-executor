@@ -7,5 +7,6 @@ table! {
         restriction_value -> Text,
         expires_at -> Timestamptz,
         is_global -> Bool,
+        analyzer_id -> Text,
     }
 }
