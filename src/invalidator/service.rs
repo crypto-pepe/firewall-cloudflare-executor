@@ -7,6 +7,7 @@ use bb8::Pool;
 use bb8::PooledConnection;
 use chrono::Utc;
 use diesel::prelude::*;
+use futures::future::join_all;
 use std::time::Duration;
 use tokio::{task, time};
 
@@ -18,10 +19,10 @@ pub struct Invalidator {
 
 impl Invalidator {
     pub fn new(cloudflare_client: CloudflareClient, db_pool: Pool<models::DbConn>) -> Self {
-        return Self {
+        Self {
             cloudflare_client,
             db_pool,
-        };
+        }
     }
     pub async fn run(self) -> Result<(), ServerError> {
         let forever = task::spawn(async move {
@@ -55,15 +56,18 @@ impl Invalidator {
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
             .map_err(|e| errors::wrap_err(e.into()))?;
-        for id in rule_ids {
-            self.cloudflare_client.delete_block_rule(id.clone()).await?;
-            if let Err(e) =
+        let handlers = rule_ids
+            .iter()
+            .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
+        let handlers_iter = join_all(handlers).await;
+        handlers_iter
+            .iter()
+            .zip(rule_ids.clone().iter())
+            .try_for_each(|(_, id)| {
                 diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
                     .execute(&*conn)
-            {
-                return Err(errors::wrap_err(e.into()));
-            }
-        }
-        Ok(())
+                    .map(|_| ())
+                    .map_err(|e| errors::wrap_err(e.into()))
+            })
     }
 }
