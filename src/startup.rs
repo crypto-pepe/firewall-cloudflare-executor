@@ -1,12 +1,13 @@
+use crate::cloudflare_client::CloudflareClient;
 use crate::configuration;
 use crate::executor;
 use crate::handlers;
 use crate::handlers::bans;
+use crate::models;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
-use diesel::PgConnection;
+use bb8::Pool;
 use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
 use tracing::info;
@@ -24,11 +25,9 @@ impl Application {
     pub async fn build(
         configuration: configuration::Settings,
         log_level_handle: Handle<EnvFilter, Formatter>,
+        cloudflare_client: CloudflareClient,
+        pool: Pool<models::DbConn>,
     ) -> Result<Self, anyhow::Error> {
-        let cloudflare_client = configuration.cloudflare.client();
-        let db_conn_string = configuration.db.pg_conn_string();
-        let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(db_conn_string);
-        let pool = bb8::Pool::builder().build(pg_mgr).await?;
         let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
 

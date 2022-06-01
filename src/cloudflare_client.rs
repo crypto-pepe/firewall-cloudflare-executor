@@ -32,22 +32,12 @@ impl CloudflareClient {
         }
     }
 
-    pub async fn restrict_rule(
+    pub async fn create_block_rule(
         &self,
-        ip: Option<String>,
-        ua: Option<String>,
+        expr: String,
         restriction_type: models::RestrictionType,
     ) -> Result<String> {
-        let expr = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref())
-            .ok_or(errors::ServerError::EmptyRequest)?;
-        info!(
-            "Will {}: {}\n globally",
-            match restriction_type {
-                models::RestrictionType::Unblock(_) => "unblock",
-                _ => "block",
-            },
-            expr,
-        );
+        info!("Will block globally: {}", expr);
 
         let req = serde_json::to_string(&models::FirewallRuleRequest {
             action: restriction_type.to_string(),
@@ -55,15 +45,9 @@ impl CloudflareClient {
         })?;
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
-        let builder = match restriction_type {
-            models::RestrictionType::Unblock(_) => self
-                .http_client
-                .delete(self.base_api_url.to_owned().add(path.as_str())),
-            _ => self
-                .http_client
-                .post(self.base_api_url.to_owned().add(path.as_str())),
-        };
-        let resp = builder
+        let resp = self
+            .http_client
+            .post(self.base_api_url.to_owned().add(path.as_str()))
             .body(req)
             .send()
             .await?
@@ -83,5 +67,24 @@ impl CloudflareClient {
             }
         };
         Ok(value.id.clone())
+    }
+    pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
+        info!("Will delete rule id {}: ttl reached", rule_id);
+        let path = format!("zones/{}/firewall/rules/{}", self.zone_id, rule_id);
+
+        let resp = self
+            .http_client
+            .delete(self.base_api_url.to_owned().add(path.as_str()))
+            .send()
+            .await
+            .map_err(|e| errors::wrap_err(e.into()))?
+            .json::<models::FirewallRuleResponse>()
+            .await
+            .map_err(|e| errors::wrap_err(e.into()))?;
+        if !resp.success {
+            error!("Request was sent, but CloudFlare responded with unsuccess");
+            return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
+        };
+        Ok(())
     }
 }

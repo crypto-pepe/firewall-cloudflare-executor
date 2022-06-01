@@ -5,27 +5,23 @@ use crate::executor::*;
 use crate::models;
 use crate::models::Nongrata;
 use crate::schema;
-use crate::schema::nongratas::restriction_value;
 
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8::PooledConnection;
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use chrono::Utc;
 use diesel::prelude::*;
 
 use tracing::info;
 
-type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
-
 #[derive(Clone)]
 pub struct ExecutorService {
     client: cloudflare_client::CloudflareClient,
-    db_pool: Pool<DbConn>,
+    db_pool: Pool<models::DbConn>,
 }
 
 impl ExecutorService {
-    pub fn new(client: cloudflare_client::CloudflareClient, db_pool: Pool<DbConn>) -> Self {
+    pub fn new(client: cloudflare_client::CloudflareClient, db_pool: Pool<models::DbConn>) -> Self {
         Self { client, db_pool }
     }
 }
@@ -39,7 +35,7 @@ impl Executor for ExecutorService {
     ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request.clone());
 
-        let conn: PooledConnection<DbConn> = self
+        let conn: PooledConnection<models::DbConn> = self
             .db_pool
             .get()
             .await
@@ -56,18 +52,17 @@ impl Executor for ExecutorService {
 
         let rule_id = self
             .client
-            .restrict_rule(
-                rule.target.ip,
-                rule.target.ua,
-                models::RestrictionType::Block,
-            )
+            .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
             .map_err(errors::wrap_err)?;
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
             chrono::DateTime::<Utc>::from_utc(
-                chrono::NaiveDateTime::from_timestamp(block_request.ttl, 0),
+                chrono::NaiveDateTime::from_timestamp(
+                    block_request.ttl + chrono::offset::Utc::now().timestamp(),
+                    0,
+                ),
                 Utc,
             ),
             restriction_type.to_string(),
@@ -87,7 +82,7 @@ impl Executor for ExecutorService {
     async fn unban(&self, unblock_request: UnblockRequest) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", unblock_request);
 
-        let conn: PooledConnection<DbConn> = self
+        let conn: PooledConnection<models::DbConn> = self
             .db_pool
             .get()
             .await
@@ -100,27 +95,21 @@ impl Executor for ExecutorService {
             Some(r) => r,
             None => return Err(errors::ServerError::EmptyRequest),
         };
-        let rule_id = schema::nongratas::table
+        let rule_ids = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)
-            .first::<String>(&*conn)
+            .load::<String>(&*conn)
             .map_err(|e| errors::wrap_err(e.into()))?;
-        if let Err(e) = self
-            .client
-            .restrict_rule(
-                rule.target.ip,
-                rule.target.ua,
-                models::RestrictionType::Unblock(rule_id),
-            )
-            .await
-        {
-            return Err(errors::wrap_err(e));
-        };
-        if let Err(e) =
-            diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
-                .execute(&*conn)
-        {
-            return Err(errors::wrap_err(e.into()));
+        for id in rule_ids {
+            if let Err(e) = self.client.delete_block_rule(id.clone()).await {
+                return Err(errors::wrap_err(e.into()));
+            };
+            if let Err(e) =
+                diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
+                    .execute(&*conn)
+            {
+                return Err(errors::wrap_err(e.into()));
+            }
         }
         Ok(())
     }

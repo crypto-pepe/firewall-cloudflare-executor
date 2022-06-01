@@ -12,6 +12,8 @@ pub mod schema;
 pub mod startup;
 pub mod telemetry;
 
+use bb8_diesel::{DieselConnection, DieselConnectionManager};
+use diesel::PgConnection;
 use std::process;
 use tracing::{error, info};
 
@@ -21,13 +23,23 @@ async fn main() {
 
     let configuration = configuration::get_config(configuration::DEFAULT_CFG_PATH)
         .expect("Failed to read configuration.");
-    let (subscriber, log_filter_handler) = telemetry::get_subscriber(&configuration);
-    let application =
-        startup::Application::build(configuration.clone(), log_filter_handler.clone())
-            .await
-            .unwrap();
-    let invalidator = invalidator::Invalidator::new();
-
+    let (subscriber, log_filter_handler) = telemetry::get_subscriber(&configuration.clone());
+    let cloudflare_client = configuration.clone().cloudflare.client();
+    let db_conn_string = configuration.clone().db.pg_conn_string();
+    let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(db_conn_string);
+    let pool = bb8::Pool::builder()
+        .build(pg_mgr)
+        .await
+        .expect("failed to create pool");
+    let application = startup::Application::build(
+        configuration.clone(),
+        log_filter_handler.clone(),
+        cloudflare_client.clone(),
+        pool.clone(),
+    )
+    .await
+    .unwrap();
+    let invalidator = invalidator::Invalidator::new(cloudflare_client, pool);
     telemetry::init_subscriber(subscriber);
     info!("cloudflare-executor is up!");
     let server_task = tokio::spawn(application.run_until_stopped());
