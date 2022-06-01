@@ -6,5 +6,6 @@ create table nongratas (
     restriction_value text not null,
     expires_at timestamptz not null,
     is_global boolean not null,
+    analyzer_id text not null,
     primary key (id)
 );

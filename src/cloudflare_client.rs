@@ -39,7 +39,7 @@ impl CloudflareClient {
         restriction_type: models::RestrictionType,
     ) -> Result<String> {
         let expr = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref())
-            .ok_or::<errors::ServerError>(errors::ServerError::EmptyRequest)?;
+            .ok_or(errors::ServerError::EmptyRequest)?;
         info!(
             "Will {}: {}\n globally",
             match restriction_type {

@@ -15,7 +15,11 @@ impl ExecutorServiceDry {
 }
 #[async_trait]
 impl Executor for ExecutorServiceDry {
-    async fn ban(&self, block_request: BlockRequest) -> Result<(), errors::ServerError> {
+    async fn ban(
+        &self,
+        block_request: BlockRequest,
+        analyzer_id: String,
+    ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request);
         let ua = block_request.target.ua;
         let ip = block_request.target.ip;
@@ -23,7 +27,11 @@ impl Executor for ExecutorServiceDry {
         if rule.is_none() {
             return Err(ServerError::EmptyRequest);
         }
-        info!("gonna apply BAN rule: {:?}", Some(rule));
+        info!(
+            "gonna apply BAN rule: {:?}\n Analyzer: {:?}",
+            Some(rule),
+            analyzer_id,
+        );
         return Ok(());
     }
     async fn unban(&self, unblock_request: UnblockRequest) -> Result<(), errors::ServerError> {

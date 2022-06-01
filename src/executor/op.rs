@@ -32,7 +32,11 @@ impl ExecutorService {
 
 #[async_trait]
 impl Executor for ExecutorService {
-    async fn ban(&self, block_request: BlockRequest) -> Result<(), errors::ServerError> {
+    async fn ban(
+        &self,
+        block_request: BlockRequest,
+        analyzer_id: String,
+    ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request.clone());
 
         let conn: PooledConnection<DbConn> = self
@@ -69,6 +73,7 @@ impl Executor for ExecutorService {
             restriction_type.to_string(),
             firewall_rule,
             true,
+            analyzer_id,
         );
         if let Err(e) = diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
@@ -80,14 +85,14 @@ impl Executor for ExecutorService {
     }
 
     async fn unban(&self, unblock_request: UnblockRequest) -> Result<(), errors::ServerError> {
-        info!("Incoming request:{:?}", unblock_request.clone());
+        info!("Incoming request:{:?}", unblock_request);
 
-        let conn: PooledConnection<DieselConnectionManager<DieselConnection<PgConnection>>> = self
+        let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .await
             .map_err(|e| errors::wrap_err(e.into()))?;
-        let rule = unblock_request.clone();
+        let rule = unblock_request;
         let firewall_rule = match models::form_firewall_rule_expression(
             rule.target.ip.as_ref(),
             rule.target.ua.as_ref(),

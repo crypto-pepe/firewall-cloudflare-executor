@@ -1,4 +1,4 @@
-use crate::schema::nongratas;
+use crate::schema::nongratas::{self};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -55,6 +55,7 @@ pub struct Nongrata {
     pub restriction_value: String,
     pub expires_at: DateTime<Utc>,
     pub is_global: bool,
+    pub analyzer_id: String,
 }
 
 impl Nongrata {
@@ -65,6 +66,7 @@ impl Nongrata {
         restriction_type: String,
         restriction_value: String,
         is_global: bool,
+        analyzer_id: String,
     ) -> Self {
         Self {
             rule_id,
@@ -73,6 +75,7 @@ impl Nongrata {
             restriction_value,
             expires_at: ttl,
             is_global,
+            analyzer_id,
         }
     }
 }
@@ -126,6 +129,5 @@ mod tests {
                 "http.user_agent eq \"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)\""
             ))
         );
-        
     }
 }
