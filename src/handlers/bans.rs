@@ -59,6 +59,6 @@ pub async fn unban_according_to_mode(
     }
 }
 
-fn get_x_analyzer_id_header<'a>(req: &'a HttpRequest) -> Option<&'a str> {
+fn get_x_analyzer_id_header(req: &HttpRequest) -> Option<&str> {
     req.headers().get("X-Analyzer-Id")?.to_str().ok()
 }
