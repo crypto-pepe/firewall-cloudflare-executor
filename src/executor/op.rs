@@ -43,7 +43,7 @@ impl Executor for ExecutorService {
             .db_pool
             .get()
             .await
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| errors::wrap_db_err(e.into()))?;
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
         let firewall_rule = match models::form_firewall_rule_expression(
@@ -62,7 +62,7 @@ impl Executor for ExecutorService {
                 models::RestrictionType::Block,
             )
             .await
-            .map_err(errors::wrap_err)?;
+            .map_err(|e| errors::wrap_client_err(e))?;
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
@@ -75,12 +75,11 @@ impl Executor for ExecutorService {
             true,
             analyzer_id,
         );
-        if let Err(e) = diesel::insert_into(schema::nongratas::table)
+        diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
             .execute(&*conn)
-        {
-            return Err(errors::wrap_err(e.into()));
-        }
+            .map_err(|e| errors::wrap_db_err(e.into()))?;
+
         Ok(())
     }
 
@@ -91,7 +90,7 @@ impl Executor for ExecutorService {
             .db_pool
             .get()
             .await
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| errors::wrap_db_err(e.into()))?;
         let rule = unblock_request;
         let firewall_rule = match models::form_firewall_rule_expression(
             rule.target.ip.as_ref(),
@@ -104,7 +103,7 @@ impl Executor for ExecutorService {
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)
             .first::<String>(&*conn)
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| errors::wrap_db_err(e.into()))?;
         if let Err(e) = self
             .client
             .restrict_rule(
@@ -114,13 +113,13 @@ impl Executor for ExecutorService {
             )
             .await
         {
-            return Err(errors::wrap_err(e));
+            return Err(errors::wrap_client_err(e));
         };
         if let Err(e) =
             diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
                 .execute(&*conn)
         {
-            return Err(errors::wrap_err(e.into()));
+            return Err(errors::wrap_db_err(e.into()));
         }
         Ok(())
     }
