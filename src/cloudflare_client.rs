@@ -48,7 +48,7 @@ impl CloudflareClient {
         let resp = self
             .http_client
             .post(self.base_api_url.to_owned().add(path.as_str()))
-            .body(req)
+            .json(&req)
             .send()
             .await?
             .json::<models::FirewallRuleResponse>()
@@ -57,15 +57,12 @@ impl CloudflareClient {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
-        let value = match resp.result.first() {
-            Some(v) => v,
-            None => {
-                return Err(ServerError::WrappedErr {
-                    cause: String::from("bad response"),
-                }
-                .into())
+        let value = resp.result.first().ok_or::<ServerError>(
+            ServerError::WrappedErr {
+                cause: "bad response".to_string(),
             }
-        };
+            .into(),
+        )?;
         Ok(value.id.clone())
     }
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {

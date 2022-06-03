@@ -1,6 +1,7 @@
 use crate::errors;
 use crate::executor;
 use crate::executor::Executor;
+use crate::handlers;
 use actix_web::{web, HttpRequest, HttpResponse};
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -15,22 +16,20 @@ pub async fn ban_according_to_mode(
     let restriction_result: Result<(), errors::ServerError>;
     let analyzer_id = get_x_analyzer_id_header(&http_req);
 
-    if analyzer_id.is_none() {
-        return HttpResponse::BadRequest().finish();
-    }
+    let analyzer_id = match analyzer_id {
+        Some(analyzer_id) => analyzer_id,
+        None => {
+            return HttpResponse::BadRequest()
+                .json(handlers::models::ExecutorResponse::no_analyzer_id());
+        }
+    };
     if is_dry.load(Ordering::Relaxed) {
         restriction_result = dry_service
-            .ban(
-                block_request,
-                String::from(analyzer_id.expect("empty header")),
-            )
+            .ban(block_request, String::from(analyzer_id))
             .await;
     } else {
         restriction_result = op_service
-            .ban(
-                block_request,
-                String::from(analyzer_id.expect("empty header")),
-            )
+            .ban(block_request, String::from(analyzer_id))
             .await;
     }
     match restriction_result {

@@ -6,7 +6,7 @@ use crate::models;
 use async_trait::async_trait;
 use tracing::info;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct ExecutorServiceDry {}
 impl ExecutorServiceDry {
     pub fn new() -> Self {
@@ -29,8 +29,7 @@ impl Executor for ExecutorServiceDry {
         }
         info!(
             "gonna apply BAN rule: {:?}\n Analyzer: {:?}",
-            Some(rule),
-            analyzer_id,
+            rule, analyzer_id,
         );
         return Ok(());
     }
@@ -42,13 +41,7 @@ impl Executor for ExecutorServiceDry {
         if rule.is_none() {
             return Err(ServerError::EmptyRequest);
         }
-        info!("gonna apply UNBAN rule: {:?}", Some(rule));
+        info!("gonna apply UNBAN rule: {:?}", rule);
         return Ok(());
-    }
-}
-
-impl Default for ExecutorServiceDry {
-    fn default() -> Self {
-        Self::new()
     }
 }
