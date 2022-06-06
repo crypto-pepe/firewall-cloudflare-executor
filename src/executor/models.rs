@@ -8,6 +8,7 @@ use crate::errors;
 pub struct BlockRequest {
     pub target: Target,
     pub reason: String,
+    #[serde(default)]
     pub ttl: u64,
 }
 

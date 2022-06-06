@@ -42,7 +42,7 @@ async fn main() {
     let invalidator = invalidator::Invalidator::new(
         cloudflare_client,
         pool,
-        configuration.server.invalidation_timeout,
+        configuration.server.invalidation_timeout_seconds,
     );
     telemetry::init_subscriber(subscriber);
     info!("cloudflare-executor is up!");
