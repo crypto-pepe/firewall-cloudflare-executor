@@ -19,7 +19,7 @@ impl CloudflareClient {
         let mut hmap = header::HeaderMap::new();
         hmap.insert(
             header::AUTHORIZATION,
-            header::HeaderValue::from_str(["Bearer", token.as_str()].join(" ").as_str())
+            header::HeaderValue::from_str(format!("Bearer {}", token.as_str()).as_str())
                 .expect("can't initialize client: token problem"),
         );
         Self {

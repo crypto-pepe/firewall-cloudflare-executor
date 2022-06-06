@@ -23,12 +23,13 @@ impl Executor for ExecutorServiceDry {
         info!("Incoming request:{:?}", block_request);
         let ua = block_request.target.ua;
         let ip = block_request.target.ip;
-        let rule = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref());
-        if rule.is_none() {
-            return Err(ServerError::EmptyRequest);
+        if block_request.ttl == 0 {
+            return Err(errors::ServerError::MissingTTL);
         }
+        let rule = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref());
+        rule.clone().ok_or(ServerError::MissingTarget)?;
         info!(
-            "gonna apply BAN rule: {:?}\n Analyzer: {:?}",
+            "Going to apply BAN rule: {:?}\n Analyzer: {:?}",
             rule, analyzer_id,
         );
         return Ok(());
@@ -38,10 +39,8 @@ impl Executor for ExecutorServiceDry {
         let ua = unblock_request.target.ua;
         let ip = unblock_request.target.ip;
         let rule = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref());
-        if rule.is_none() {
-            return Err(ServerError::EmptyRequest);
-        }
-        info!("gonna apply UNBAN rule: {:?}", rule);
+        rule.clone().ok_or(ServerError::MissingTarget)?;
+        info!("Going apply UNBAN rule: {:?}", rule);
         return Ok(());
     }
 }

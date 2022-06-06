@@ -15,18 +15,24 @@ use tokio::{task, time};
 pub struct Invalidator {
     cloudflare_client: CloudflareClient,
     db_pool: Pool<models::DbConn>,
+    timeout_sec: u64,
 }
 
 impl Invalidator {
-    pub fn new(cloudflare_client: CloudflareClient, db_pool: Pool<models::DbConn>) -> Self {
+    pub fn new(
+        cloudflare_client: CloudflareClient,
+        db_pool: Pool<models::DbConn>,
+        timeout_sec: u64,
+    ) -> Self {
         Self {
             cloudflare_client,
             db_pool,
+            timeout_sec,
         }
     }
     pub async fn run(self) -> Result<(), ServerError> {
         let forever = task::spawn(async move {
-            let mut interval = time::interval(Duration::from_secs(1));
+            let mut interval = time::interval(Duration::from_secs(self.timeout_sec));
             loop {
                 interval.tick().await;
                 self.clone().invalidate().await?;

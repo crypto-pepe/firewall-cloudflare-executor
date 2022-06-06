@@ -17,6 +17,7 @@ pub struct Settings {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+    pub invalidation_timeout: u64,
 }
 impl ServerConfig {
     pub fn get_address(self) -> String {

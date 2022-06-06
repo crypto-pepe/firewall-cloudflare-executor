@@ -11,10 +11,16 @@ pub enum ServerError {
     Overflow,
     #[error("Wrapped err: {cause:?}")]
     WrappedErr { cause: String },
-    #[error("Empty request")]
-    EmptyRequest,
+    #[error("Missing target")]
+    MissingTarget,
     #[error("DB error")]
     DBError { cause: String },
+    #[error("Missing TTL")]
+    MissingTTL,
+    #[error("Missing log_level")]
+    WrongLogLevel,
+    #[error("Missing dry run status")]
+    MissingDryRunStatus,
 }
 
 impl From<ServerError> for HttpResponse {
@@ -23,10 +29,19 @@ impl From<ServerError> for HttpResponse {
             ServerError::Unsuccessfull { info } => HttpResponse::BadGateway().json(info),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
-            ServerError::EmptyRequest => {
+            ServerError::MissingTarget => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_target())
             }
             ServerError::DBError { cause } => HttpResponse::InternalServerError().json(cause),
+            ServerError::MissingTTL => {
+                HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_ttl())
+            }
+            ServerError::WrongLogLevel => {
+                HttpResponse::Ok().json(handlers::models::ExecutorResponse::wrong_log_level())
+            }
+            ServerError::MissingDryRunStatus => {
+                HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_dry_run_status())
+            }
         }
     }
 }

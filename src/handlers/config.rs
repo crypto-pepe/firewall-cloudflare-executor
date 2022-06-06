@@ -1,5 +1,5 @@
+use crate::errors;
 use crate::handlers;
-
 use actix_web::{web, HttpResponse};
 use std::sync::Mutex;
 use tracing::warn;
@@ -18,16 +18,13 @@ pub async fn config(
             if let Some(dry_run) = q.dry_run {
                 *s = dry_run;
             }
-            warn!(
-                "Alert! Dry-run mode is now {}",
-                if *s { "ON" } else { "OFF" }
-            );
+            warn!("Dry-run mode is now {}", if *s { "ON" } else { "OFF" });
         }
-        Err(_) => return HttpResponse::BadRequest().finish(),
+        Err(_) => return errors::ServerError::MissingDryRunStatus.into(),
     };
     if let Some(log_lvl) = q.log_level.clone() {
         if log_level.modify(|e| *e = EnvFilter::new(log_lvl)).is_err() {
-            return HttpResponse::InternalServerError().finish();
+            return errors::ServerError::WrongLogLevel.into();
         }
     }
 

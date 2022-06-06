@@ -1,6 +1,7 @@
 server:
   host: 127.0.0.1
   port: 9999
+  invalidation_timeout: 1
 cloudflare:
   base_url: https://api.cloudflare.com/client/v4/
   account_id: ""

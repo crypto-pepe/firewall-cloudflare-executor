@@ -43,25 +43,24 @@ impl Executor for ExecutorService {
             .map_err(|e| errors::wrap_db_err(e.into()))?;
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
-        let firewall_rule = match models::form_firewall_rule_expression(
-            rule.target.ip.as_ref(),
-            rule.target.ua.as_ref(),
-        ) {
-            Some(r) => r,
-            None => return Err(errors::ServerError::EmptyRequest),
-        };
+        let firewall_rule =
+            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
+                .ok_or(errors::ServerError::MissingTarget)?;
 
         let rule_id = self
             .client
             .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
             .map_err(|e| errors::wrap_client_err(e))?;
+        if block_request.ttl == 0 {
+            return Err(errors::ServerError::MissingTTL);
+        }
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
             chrono::DateTime::<Utc>::from_utc(
                 chrono::NaiveDateTime::from_timestamp(
-                    block_request.ttl + chrono::offset::Utc::now().timestamp(),
+                    block_request.ttl as i64 + chrono::offset::Utc::now().timestamp(),
                     0,
                 ),
                 Utc,
@@ -88,13 +87,9 @@ impl Executor for ExecutorService {
             .await
             .map_err(|e| errors::wrap_db_err(e.into()))?;
         let rule = unblock_request;
-        let firewall_rule = match models::form_firewall_rule_expression(
-            rule.target.ip.as_ref(),
-            rule.target.ua.as_ref(),
-        ) {
-            Some(r) => r,
-            None => return Err(errors::ServerError::EmptyRequest),
-        };
+        let firewall_rule =
+            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
+                .ok_or(errors::ServerError::MissingTarget)?;
         let rule_ids = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)

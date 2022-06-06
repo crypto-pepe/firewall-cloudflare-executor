@@ -17,7 +17,6 @@ use tracing_subscriber::reload::Handle;
 use tracing_subscriber::EnvFilter;
 
 pub struct Application {
-    port: u16,
     server: Server,
 }
 
@@ -33,7 +32,6 @@ impl Application {
 
         let executor_service_op = executor::ExecutorService::new(cloudflare_client, pool);
         let executor_service_dry = executor::ExecutorServiceDry::new();
-        let port = listener.local_addr()?.port();
         let server = run(
             listener,
             log_level_handle,
@@ -42,12 +40,9 @@ impl Application {
         )
         .await?;
         info!("server is running on: {:?}", server_addr);
-        Ok(Self { port, server })
+        Ok(Self { server })
     }
 
-    pub fn port(&self) -> u16 {
-        self.port
-    }
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
         self.server.await
     }

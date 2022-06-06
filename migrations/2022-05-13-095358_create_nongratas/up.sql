@@ -9,3 +9,6 @@ create table nongratas (
     analyzer_id text not null,
     primary key (id)
 );
+
+create index concurrently "restriction_value_rule_id_index"
+on events using btree (restriction_value, rule_id);

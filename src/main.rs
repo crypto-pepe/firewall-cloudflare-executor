@@ -38,8 +38,12 @@ async fn main() {
         pool.clone(),
     )
     .await
-    .unwrap();
-    let invalidator = invalidator::Invalidator::new(cloudflare_client, pool);
+    .expect("Failed to build application");
+    let invalidator = invalidator::Invalidator::new(
+        cloudflare_client,
+        pool,
+        configuration.server.invalidation_timeout,
+    );
     telemetry::init_subscriber(subscriber);
     info!("cloudflare-executor is up!");
     let server_task = tokio::spawn(application.run_until_stopped());
