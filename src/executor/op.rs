@@ -51,7 +51,7 @@ impl Executor for ExecutorService {
             .client
             .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
-            .map_err(|e| errors::wrap_client_err(e))?;
+            .map_err(errors::wrap_client_err)?;
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
