@@ -7,14 +7,14 @@ use async_trait::async_trait;
 use tracing::info;
 
 #[derive(Clone, Default)]
-pub struct ExecutorServiceDry {}
-impl ExecutorServiceDry {
+pub struct ExecutorServiceDryRun {}
+impl ExecutorServiceDryRun {
     pub fn new() -> Self {
         Self {}
     }
 }
 #[async_trait]
-impl Executor for ExecutorServiceDry {
+impl Executor for ExecutorServiceDryRun {
     async fn ban(
         &self,
         block_request: BlockRequest,

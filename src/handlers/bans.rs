@@ -9,8 +9,8 @@ pub async fn ban_according_to_mode(
     http_req: HttpRequest,
     req: web::Json<executor::models::BlockRequest>,
     op_service: web::Data<executor::ExecutorService>,
-    dry_service: web::Data<executor::ExecutorServiceDry>,
-    is_dry: web::Data<AtomicBool>,
+    dry_run_service: web::Data<executor::ExecutorServiceDryRun>,
+    is_dry_run: web::Data<AtomicBool>,
 ) -> HttpResponse {
     let block_request = req.0;
     let restriction_result: Result<(), errors::ServerError>;
@@ -23,8 +23,8 @@ pub async fn ban_according_to_mode(
                 .json(handlers::models::ExecutorResponse::no_analyzer_id());
         }
     };
-    if is_dry.load(Ordering::Relaxed) {
-        restriction_result = dry_service
+    if is_dry_run.load(Ordering::Relaxed) {
+        restriction_result = dry_run_service
             .ban(block_request, String::from(analyzer_id))
             .await;
     } else {
@@ -41,14 +41,14 @@ pub async fn ban_according_to_mode(
 pub async fn unban_according_to_mode(
     req: web::Json<executor::models::UnblockRequest>,
     op_service: web::Data<executor::ExecutorService>,
-    dry_service: web::Data<executor::ExecutorServiceDry>,
-    is_dry: web::Data<AtomicBool>,
+    dry_run_service: web::Data<executor::ExecutorServiceDryRun>,
+    is_dry_run: web::Data<AtomicBool>,
 ) -> HttpResponse {
     let unblock_request = req.0;
     let restriction_result: Result<(), errors::ServerError>;
 
-    if is_dry.load(Ordering::Relaxed) {
-        restriction_result = dry_service.unban(unblock_request).await;
+    if is_dry_run.load(Ordering::Relaxed) {
+        restriction_result = dry_run_service.unban(unblock_request).await;
     } else {
         restriction_result = op_service.unban(unblock_request).await;
     }
