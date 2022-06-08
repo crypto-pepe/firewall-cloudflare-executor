@@ -1,4 +1,3 @@
-use crate::errors;
 use crate::models;
 use crate::schema;
 use crate::{cloudflare_client::CloudflareClient, errors::ServerError};
@@ -38,7 +37,9 @@ impl Invalidator {
                 self.clone().invalidate().await?;
             }
         });
-        forever.await.map_err(|e| errors::wrap_err(e.into()))?
+        forever
+            .await
+            .map_err(|e| ServerError::from(anyhow::anyhow!(e)))?
     }
     pub async fn run_invalidator_untill_stopped(self) -> Result<(), ServerError> {
         self.run().await
@@ -48,7 +49,7 @@ impl Invalidator {
             .db_pool
             .get()
             .await
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| ServerError::PoolError(e.to_string()))?;
         let rule_ids = schema::nongratas::table
             .filter(
                 schema::nongratas::expires_at.ge(chrono::DateTime::<Utc>::from_utc(
@@ -61,7 +62,7 @@ impl Invalidator {
             )
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| ServerError::from(e))?;
         let handlers = rule_ids
             .iter()
             .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
@@ -73,7 +74,7 @@ impl Invalidator {
                 diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
                     .execute(&*conn)
                     .map(|_| ())
-                    .map_err(|e| errors::wrap_err(e.into()))
+                    .map_err(|e| ServerError::from(e))
             })
     }
 }

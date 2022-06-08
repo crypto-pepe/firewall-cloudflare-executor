@@ -10,7 +10,9 @@ pub enum ServerError {
     Unsuccessfull { info: Vec<String> },
     #[error("Request body overflow")]
     Overflow,
-    #[error("Wrapped err: {cause:?}")]
+    #[error("HTTP client error: {0}")]
+    ClietnError(#[from] reqwest::Error),
+    #[error("Wrapped error: {cause:?}")]
     WrappedErr { cause: String },
     #[error("Missing target")]
     MissingTarget,
@@ -20,14 +22,12 @@ pub enum ServerError {
     WrongLogLevel,
     #[error("Missing dry run status")]
     MissingDryRunStatus,
-    #[error("Empty request")]
-    EmptyRequest,
     #[error("PoolError: {0}")]
     PoolError(String),
     #[error("DB error: {0}")]
     DBError(#[from] diesel::result::Error),
     #[error(transparent)]
-    Other(#[from] anyhow::Error)
+    Other(#[from] anyhow::Error),
 }
 
 impl From<ServerError> for HttpResponse {
@@ -36,6 +36,10 @@ impl From<ServerError> for HttpResponse {
             ServerError::Unsuccessfull { info } => HttpResponse::BadGateway().json(info),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
+            ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),
+            ServerError::ClietnError(source) => {
+                HttpResponse::InternalServerError().json(source.to_string())
+            }
             ServerError::MissingTarget => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_target())
             }
@@ -48,8 +52,9 @@ impl From<ServerError> for HttpResponse {
             ServerError::MissingDryRunStatus => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_dry_run_status())
             }
-            ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),
-            ServerError::DBError(source) => HttpResponse::InternalServerError().json(source.to_string()),
+            ServerError::DBError(source) => {
+                HttpResponse::InternalServerError().json(source.to_string())
+            }
             ServerError::Other(source) => HttpResponse::InternalServerError().json(json!({
                 "reason": source.to_string()
             })),
@@ -58,15 +63,3 @@ impl From<ServerError> for HttpResponse {
 }
 
 impl actix_web::error::ResponseError for ServerError {}
-
-pub fn wrap_err(e: anyhow::Error) -> ServerError {
-    return ServerError::WrappedErr {
-        cause: format!("cause : {}", e),
-    };
-}
-
-pub fn wrap_client_err(e: anyhow::Error) -> ServerError {
-    return ServerError::Unsuccessfull {
-        info: vec![format!("cause : {}", e)],
-    };
-}

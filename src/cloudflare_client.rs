@@ -74,10 +74,10 @@ impl CloudflareClient {
             .delete(self.base_api_url.to_owned().add(path.as_str()))
             .send()
             .await
-            .map_err(|e| errors::wrap_err(e.into()))?
+            .map_err(|e| ServerError::from(e))?
             .json::<models::FirewallRuleResponse>()
             .await
-            .map_err(|e| errors::wrap_err(e.into()))?;
+            .map_err(|e| ServerError::from(e))?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors });
