@@ -30,7 +30,11 @@
 ```json
 {
     "dry_run": false,
+<<<<<<< HEAD
     "log_level": "error,firewall_cloudflare_executor=trace"
+=======
+    "log_level": "error,firewall_executor=trace"
+>>>>>>> release/v0.1.0
 }
 ```
 

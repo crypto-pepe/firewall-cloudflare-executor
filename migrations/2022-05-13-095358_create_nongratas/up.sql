@@ -9,6 +9,9 @@ create table nongratas (
     analyzer_id text not null,
     primary key (id)
 );
+<<<<<<< HEAD
 
 create index concurrently "restriction_value_rule_id_index"
 on events using btree (restriction_value, rule_id);
+=======
+>>>>>>> release/v0.1.0
