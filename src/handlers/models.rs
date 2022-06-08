@@ -19,7 +19,7 @@ pub struct Details {
 
 impl ExecutorResponse {
     pub fn no_analyzer_id() -> Self {
-        return Self {
+        Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
             reason: String::from(
                 "Provided request does not match the constraints: empty analyzer-id header",
@@ -27,15 +27,15 @@ impl ExecutorResponse {
             details: Details {
                 target: String::from(""),
             },
-        };
+        }
     }
     pub fn no_target() -> Self {
-        return Self {
+        Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
             reason: String::from("Provided request does not match the constraints"),
             details: Details {
                 target: String::from("This field is required"),
             },
-        };
+        }
     }
 }

@@ -73,12 +73,12 @@ impl CloudflareClient {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
         };
-        let value = resp.result.first().ok_or::<ServerError>(
-            ServerError::WrappedErr {
+        let value = resp
+            .result
+            .first()
+            .ok_or::<ServerError>(ServerError::WrappedErr {
                 cause: "bad response".to_string(),
-            }
-            .into(),
-        )?;
+            })?;
         Ok(value.id.clone())
     }
 }
