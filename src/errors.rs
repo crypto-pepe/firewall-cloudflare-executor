@@ -1,6 +1,7 @@
 use crate::handlers;
 
 use actix_web::HttpResponse;
+use serde_json::json;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,14 +14,20 @@ pub enum ServerError {
     WrappedErr { cause: String },
     #[error("Missing target")]
     MissingTarget,
-    #[error("DB error")]
-    DBError { cause: String },
     #[error("Missing TTL")]
     MissingTTL,
     #[error("Missing log_level")]
     WrongLogLevel,
     #[error("Missing dry run status")]
     MissingDryRunStatus,
+    #[error("Empty request")]
+    EmptyRequest,
+    #[error("PoolError: {0}")]
+    PoolError(String),
+    #[error("DB error: {0}")]
+    DBError(#[from] diesel::result::Error),
+    #[error(transparent)]
+    Other(#[from] anyhow::Error)
 }
 
 impl From<ServerError> for HttpResponse {
@@ -32,7 +39,6 @@ impl From<ServerError> for HttpResponse {
             ServerError::MissingTarget => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_target())
             }
-            ServerError::DBError { cause } => HttpResponse::InternalServerError().json(cause),
             ServerError::MissingTTL => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_ttl())
             }
@@ -42,6 +48,11 @@ impl From<ServerError> for HttpResponse {
             ServerError::MissingDryRunStatus => {
                 HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_dry_run_status())
             }
+            ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),
+            ServerError::DBError(source) => HttpResponse::InternalServerError().json(source.to_string()),
+            ServerError::Other(source) => HttpResponse::InternalServerError().json(json!({
+                "reason": source.to_string()
+            })),
         }
     }
 }
@@ -50,12 +61,6 @@ impl actix_web::error::ResponseError for ServerError {}
 
 pub fn wrap_err(e: anyhow::Error) -> ServerError {
     return ServerError::WrappedErr {
-        cause: format!("cause : {}", e),
-    };
-}
-
-pub fn wrap_db_err(e: anyhow::Error) -> ServerError {
-    return ServerError::DBError {
         cause: format!("cause : {}", e),
     };
 }

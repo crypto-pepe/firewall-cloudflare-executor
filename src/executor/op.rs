@@ -1,5 +1,6 @@
 use crate::cloudflare_client;
 use crate::errors;
+use crate::errors::ServerError;
 use crate::executor::models::Executor;
 use crate::executor::*;
 use crate::models;
@@ -40,7 +41,8 @@ impl Executor for ExecutorService {
             .db_pool
             .get()
             .await
-            .map_err(|e| errors::wrap_db_err(e.into()))?;
+            .map_err(|e| ServerError::PoolError(e.to_string()))?;
+
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
         let firewall_rule =
@@ -51,10 +53,11 @@ impl Executor for ExecutorService {
             .client
             .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
-            .map_err(errors::wrap_client_err)?;
+            .map_err(|e| ServerError::from(e))?;
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
+
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
@@ -73,7 +76,7 @@ impl Executor for ExecutorService {
         diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
             .execute(&*conn)
-            .map_err(|e| errors::wrap_db_err(e.into()))?;
+            .map_err(|e| ServerError::from(e))?;
 
         Ok(())
     }
@@ -85,7 +88,8 @@ impl Executor for ExecutorService {
             .db_pool
             .get()
             .await
-            .map_err(|e| errors::wrap_db_err(e.into()))?;
+            .map_err(|e| ServerError::PoolError(e.to_string()))?;
+
         let rule = unblock_request;
         let firewall_rule =
             models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())

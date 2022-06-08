@@ -39,10 +39,10 @@ impl CloudflareClient {
     ) -> Result<String> {
         info!("Will block globally: {}", expr);
 
-        let req = serde_json::to_string(&models::FirewallRuleRequest {
+        let req = models::FirewallRuleRequest {
             action: restriction_type.to_string(),
             filter: models::Filter { expression: expr },
-        })?;
+        };
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
         let resp = self
