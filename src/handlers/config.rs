@@ -8,12 +8,12 @@ use tracing_subscriber::reload::Handle;
 use tracing_subscriber::EnvFilter;
 
 pub async fn config(
-    is_dry: web::Data<Mutex<bool>>,
+    is_dry_run: web::Data<Mutex<bool>>,
     log_level: web::Data<Handle<EnvFilter, Formatter>>,
     q: web::Query<handlers::models::AdminRequest>,
 ) -> HttpResponse {
-    let dry_status = is_dry.lock();
-    match dry_status {
+    let dry_run_status = is_dry_run.lock();
+    match dry_run_status {
         Ok(mut s) => {
             if let Some(dry_run) = q.dry_run {
                 *s = dry_run;

@@ -30,13 +30,13 @@ impl Application {
         let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
 
-        let executor_service_op = executor::ExecutorService::new(cloudflare_client, pool);
-        let executor_service_dry = executor::ExecutorServiceDry::new();
+        let executor_service_op_run = executor::ExecutorService::new(cloudflare_client, pool);
+        let executor_service_dry_run = executor::ExecutorServiceDryRun::new();
         let server = run(
             listener,
             log_level_handle,
-            executor_service_op.clone(),
-            executor_service_dry.clone(),
+            executor_service_op_run.clone(),
+            executor_service_dry_run.clone(),
         )
         .await?;
         info!("server is running on: {:?}", server_addr);
@@ -51,9 +51,9 @@ async fn run(
     listener: TcpListener,
     log_level_handle: Handle<EnvFilter, Formatter>,
     executor_service_op: executor::ExecutorService,
-    executor_service_dry: executor::ExecutorServiceDry,
+    executor_service_dry_run: executor::ExecutorServiceDryRun,
 ) -> Result<Server, std::io::Error> {
-    let is_dry = web::Data::new(AtomicBool::new(false));
+    let is_dry_run = web::Data::new(AtomicBool::new(false));
 
     let server = HttpServer::new(move || {
         App::new()
@@ -64,8 +64,8 @@ async fn run(
             .route("/api/bans", web::delete().to(bans::unban_according_to_mode))
             .app_data(web::Data::new(log_level_handle.clone()))
             .app_data(web::Data::new(executor_service_op.clone()))
-            .app_data(web::Data::new(executor_service_dry.clone()))
-            .app_data(web::Data::new(is_dry.clone()))
+            .app_data(web::Data::new(executor_service_dry_run.clone()))
+            .app_data(web::Data::new(is_dry_run.clone()))
     })
     .listen(listener)?
     .run();
