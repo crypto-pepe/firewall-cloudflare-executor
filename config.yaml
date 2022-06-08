@@ -1,0 +1,17 @@
+server:
+  host: 127.0.0.1
+  port: 9999
+cloudflare:
+  base_url: https://api.cloudflare.com/client/v4/
+  account_id: ""
+  token: ""
+  zone_id: ""
+db:
+  user: "postgres"
+  password: "1234"
+  db: "postgres"
+  host: "127.0.0.1"
+  port: "5431"
+tracing:
+  svc_name: ""
+  jaeger_endpoint: ""
