@@ -62,7 +62,7 @@ impl Invalidator {
             )
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
         let handlers = rule_ids
             .iter()
             .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
@@ -74,7 +74,7 @@ impl Invalidator {
                 diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
                     .execute(&*conn)
                     .map(|_| ())
-                    .map_err(|e| ServerError::from(e))
+                    .map_err(ServerError::from)
             })
     }
 }

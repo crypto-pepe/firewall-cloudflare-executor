@@ -15,7 +15,7 @@ pub mod telemetry;
 use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use diesel::PgConnection;
 use std::process;
-use std::time::Duration;
+
 use tracing::{error, info};
 
 #[tokio::main]
@@ -43,7 +43,7 @@ async fn main() {
     let invalidator = invalidator::Invalidator::new(
         cloudflare_client,
         pool,
-        Duration::from(configuration.cloudflare.invalidation_timeout_string.into()),
+        configuration.cloudflare.invalidation_timeout_string.into(),
     );
     telemetry::init_subscriber(subscriber);
     info!("cloudflare-executor is up!");

@@ -53,7 +53,7 @@ impl Executor for ExecutorService {
             .client
             .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
 
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
@@ -76,7 +76,7 @@ impl Executor for ExecutorService {
         diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
             .execute(&*conn)
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
 
         Ok(())
     }
@@ -98,7 +98,7 @@ impl Executor for ExecutorService {
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
         let handles = rule_ids
             .iter()
             .map(|id| self.client.delete_block_rule(id.clone()));
@@ -110,7 +110,7 @@ impl Executor for ExecutorService {
                 diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
                     .execute(&*conn)
                     .map(|_| ())
-                    .map_err(|e| ServerError::from(e))
+                    .map_err(ServerError::from)
             })
     }
 }
