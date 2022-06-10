@@ -1,4 +1,4 @@
-use pepe_config;
+use pepe_config::{self, DurationString};
 use serde::{Deserialize, Serialize};
 
 use crate::cloudflare_client::CloudflareClient;
@@ -17,7 +17,6 @@ pub struct Settings {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
-    pub invalidation_timeout_seconds: u64,
 }
 impl ServerConfig {
     pub fn get_address(self) -> String {
@@ -27,10 +26,11 @@ impl ServerConfig {
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct CloudflareClientConfig {
-    base_url: String,
-    account_id: String,
-    zone_id: String,
-    token: String,
+    pub base_url: String,
+    pub account_id: String,
+    pub zone_id: String,
+    pub token: String,
+    pub invalidation_timeout_string: DurationString,
 }
 
 impl CloudflareClientConfig {

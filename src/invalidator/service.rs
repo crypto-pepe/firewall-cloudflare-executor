@@ -14,14 +14,14 @@ use tokio::{task, time};
 pub struct Invalidator {
     cloudflare_client: CloudflareClient,
     db_pool: Pool<models::DbConn>,
-    timeout_sec: u64,
+    timeout_sec: Duration,
 }
 
 impl Invalidator {
     pub fn new(
         cloudflare_client: CloudflareClient,
         db_pool: Pool<models::DbConn>,
-        timeout_sec: u64,
+        timeout_sec: Duration,
     ) -> Self {
         Self {
             cloudflare_client,
@@ -30,18 +30,18 @@ impl Invalidator {
         }
     }
     pub async fn run(self) -> Result<(), ServerError> {
-        let forever = task::spawn(async move {
-            let mut interval = time::interval(Duration::from_secs(self.timeout_sec));
+        let invalidation_handle = task::spawn(async move {
+            let mut interval = time::interval(self.timeout_sec);
             loop {
                 interval.tick().await;
                 self.clone().invalidate().await?;
             }
         });
-        forever
+        invalidation_handle
             .await
             .map_err(|e| ServerError::from(anyhow::anyhow!(e)))?
     }
-    pub async fn run_invalidator_untill_stopped(self) -> Result<(), ServerError> {
+    pub async fn run_untill_stopped(self) -> Result<(), ServerError> {
         self.run().await
     }
     pub async fn invalidate(self) -> Result<(), ServerError> {
@@ -66,8 +66,8 @@ impl Invalidator {
         let handlers = rule_ids
             .iter()
             .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
-        let handlers_iter = join_all(handlers).await;
-        handlers_iter
+        let handlers = join_all(handlers).await;
+        handlers
             .iter()
             .zip(rule_ids.clone().iter())
             .try_for_each(|(_, id)| {
