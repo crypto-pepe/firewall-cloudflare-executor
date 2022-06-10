@@ -84,7 +84,7 @@ impl Nongrata {
 
 const SEPARATOR: &str = " and ";
 
-pub fn form_firewall_rule_expression(ip: Option<&String>, ua: Option<&String>) -> Option<String> {
+pub fn form_firewall_rule_expression(ip: Option<String>, ua: Option<String>) -> Option<String> {
     let mut ss = vec![];
 
     if ua.is_none() && ip.is_none() {
@@ -107,8 +107,8 @@ mod tests {
     fn test_form_firewall_rule_expression() {
         assert_eq!(
             form_firewall_rule_expression(
-                Some(&String::from("192.168.0.1")),
-                Some(&String::from(
+                Some(String::from("192.168.0.1")),
+                Some(String::from(
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
                 ))
             ),
@@ -116,14 +116,14 @@ mod tests {
         );
 
         assert_eq!(
-            form_firewall_rule_expression(Some(&String::from("192.168.0.1")), None,),
+            form_firewall_rule_expression(Some(String::from("192.168.0.1")), None,),
             Some(String::from("ip.src eq 192.168.0.1"))
         );
 
         assert_eq!(
             form_firewall_rule_expression(
                 None,
-                Some(&String::from(
+                Some(String::from(
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
                 ))
             ),

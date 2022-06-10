@@ -45,9 +45,8 @@ impl Executor for ExecutorService {
 
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
-        let firewall_rule =
-            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
-                .ok_or(errors::ServerError::MissingTarget)?;
+        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
+            .ok_or(errors::ServerError::MissingTarget)?;
 
         let rule_id = self
             .client
@@ -91,9 +90,8 @@ impl Executor for ExecutorService {
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
         let rule = unblock_request;
-        let firewall_rule =
-            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
-                .ok_or(errors::ServerError::MissingTarget)?;
+        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
+            .ok_or(errors::ServerError::MissingTarget)?;
         let rule_ids = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)

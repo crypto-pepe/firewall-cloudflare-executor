@@ -26,7 +26,7 @@ impl Executor for ExecutorServiceDryRun {
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
-        let rule = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref());
+        let rule = models::form_firewall_rule_expression(ip, ua);
         rule.clone().ok_or(ServerError::MissingTarget)?;
         info!(
             "Going to apply BAN rule: {:?}\n Analyzer: {:?}",
@@ -38,7 +38,7 @@ impl Executor for ExecutorServiceDryRun {
         info!("Incoming request:{:?}", unblock_request);
         let ua = unblock_request.target.ua;
         let ip = unblock_request.target.ip;
-        let rule = models::form_firewall_rule_expression(ip.as_ref(), ua.as_ref());
+        let rule = models::form_firewall_rule_expression(ip, ua);
         rule.clone().ok_or(ServerError::MissingTarget)?;
         info!("Going apply UNBAN rule: {:?}", rule);
         return Ok(());
