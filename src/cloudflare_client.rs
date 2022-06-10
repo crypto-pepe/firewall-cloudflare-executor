@@ -1,5 +1,3 @@
-use std::ops::Add;
-
 use crate::errors;
 use crate::errors::ServerError;
 use crate::models;
@@ -7,7 +5,7 @@ use anyhow::Result;
 use reqwest::{header, Client};
 use tracing::{error, info};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct CloudflareClient {
     http_client: Client,
     base_api_url: String,
@@ -19,7 +17,8 @@ impl CloudflareClient {
         let mut hmap = header::HeaderMap::new();
         hmap.insert(
             header::AUTHORIZATION,
-            header::HeaderValue::from_str(format!("Bearer {}", token.as_str()).as_str())
+            format!("Bearer {}", token.as_str())
+                .parse()
                 .expect("can't initialize client: token problem"),
         );
         Self {
@@ -31,7 +30,7 @@ impl CloudflareClient {
             zone_id,
         }
     }
-
+    #[tracing::instrument()]
     pub async fn create_block_rule(
         &self,
         expr: String,
@@ -47,7 +46,7 @@ impl CloudflareClient {
 
         let resp = self
             .http_client
-            .post(self.base_api_url.to_owned().add(path.as_str()))
+            .post(format!("{}{}", self.base_api_url, path))
             .json(&req)
             .send()
             .await?
@@ -65,13 +64,14 @@ impl CloudflareClient {
             })?;
         Ok(value.id.clone())
     }
+    #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
         info!("Will delete rule id {}: ttl reached", rule_id);
         let path = format!("zones/{}/firewall/rules/{}", self.zone_id, rule_id);
 
         let resp = self
             .http_client
-            .delete(self.base_api_url.to_owned().add(path.as_str()))
+            .delete(format!("{}{}", self.base_api_url, path))
             .send()
             .await
             .map_err(|e| ServerError::from(e))?

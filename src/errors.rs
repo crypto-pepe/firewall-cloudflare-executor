@@ -11,7 +11,7 @@ pub enum ServerError {
     #[error("Request body overflow")]
     Overflow,
     #[error("HTTP client error: {0}")]
-    ClietnError(#[from] reqwest::Error),
+    ClientError(#[from] reqwest::Error),
     #[error("Wrapped error: {cause:?}")]
     WrappedErr { cause: String },
     #[error("Missing target")]
@@ -37,21 +37,19 @@ impl From<ServerError> for HttpResponse {
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
             ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),
-            ServerError::ClietnError(source) => {
+            ServerError::ClientError(source) => {
                 HttpResponse::InternalServerError().json(source.to_string())
             }
             ServerError::MissingTarget => {
-                HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_target())
+                HttpResponse::BadRequest().json(handlers::models::ExecutorResponse::no_target())
             }
             ServerError::MissingTTL => {
-                HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_ttl())
+                HttpResponse::BadRequest().json(handlers::models::ExecutorResponse::no_ttl())
             }
-            ServerError::WrongLogLevel => {
-                HttpResponse::Ok().json(handlers::models::ExecutorResponse::wrong_log_level())
-            }
-            ServerError::MissingDryRunStatus => {
-                HttpResponse::Ok().json(handlers::models::ExecutorResponse::no_dry_run_status())
-            }
+            ServerError::WrongLogLevel => HttpResponse::BadRequest()
+                .json(handlers::models::ExecutorResponse::wrong_log_level()),
+            ServerError::MissingDryRunStatus => HttpResponse::BadRequest()
+                .json(handlers::models::ExecutorResponse::no_dry_run_status()),
             ServerError::DBError(source) => {
                 HttpResponse::InternalServerError().json(source.to_string())
             }

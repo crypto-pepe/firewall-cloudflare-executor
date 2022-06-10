@@ -99,10 +99,10 @@ impl Executor for ExecutorService {
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
             .map_err(|e| ServerError::from(e))?;
-        let handlers = rule_ids
+        let handles = rule_ids
             .iter()
             .map(|id| self.client.delete_block_rule(id.clone()));
-        let handlers_iter = join_all(handlers).await;
+        let handlers_iter = join_all(handles).await;
         handlers_iter
             .iter()
             .zip(rule_ids.clone().iter())
