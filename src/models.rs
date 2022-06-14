@@ -1,13 +1,9 @@
 use crate::schema::nongratas::{self};
 
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use chrono::{DateTime, Utc};
-use diesel::PgConnection;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::Display;
-
-pub type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
 
 #[derive(Serialize)]
 pub struct FirewallRuleRequest {

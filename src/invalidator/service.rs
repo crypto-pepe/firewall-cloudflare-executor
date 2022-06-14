@@ -1,4 +1,4 @@
-use crate::models;
+use crate::pool::DbConn;
 use crate::schema;
 use crate::{cloudflare_client::CloudflareClient, errors::ServerError};
 
@@ -13,14 +13,14 @@ use tokio::{task, time};
 #[derive(Clone)]
 pub struct Invalidator {
     cloudflare_client: CloudflareClient,
-    db_pool: Pool<models::DbConn>,
+    db_pool: Pool<DbConn>,
     timeout: Duration,
 }
 
 impl Invalidator {
     pub fn new(
         cloudflare_client: CloudflareClient,
-        db_pool: Pool<models::DbConn>,
+        db_pool: Pool<DbConn>,
         timeout: Duration,
     ) -> Self {
         Self {
@@ -45,7 +45,7 @@ impl Invalidator {
         self.run().await
     }
     pub async fn invalidate(self) -> Result<(), ServerError> {
-        let conn: PooledConnection<models::DbConn> = self
+        let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .await

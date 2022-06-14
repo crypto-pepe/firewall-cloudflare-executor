@@ -1,8 +1,10 @@
-use crate::{errors::ServerError, models::DbConn};
+use crate::errors::ServerError;
 
 use bb8::Pool;
 use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use diesel::PgConnection;
+
+pub type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
 
 pub async fn get_db_pool(conn_string: String) -> Result<Pool<DbConn>, ServerError> {
     let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(conn_string);

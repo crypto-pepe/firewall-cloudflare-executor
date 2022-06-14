@@ -5,6 +5,7 @@ use crate::executor::models::Executor;
 use crate::executor::*;
 use crate::models;
 use crate::models::Nongrata;
+use crate::pool::DbConn;
 use crate::schema;
 
 use async_trait::async_trait;
@@ -19,11 +20,11 @@ use tracing::info;
 #[derive(Clone)]
 pub struct ExecutorService {
     client: cloudflare_client::CloudflareClient,
-    db_pool: Pool<models::DbConn>,
+    db_pool: Pool<DbConn>,
 }
 
 impl ExecutorService {
-    pub fn new(client: cloudflare_client::CloudflareClient, db_pool: Pool<models::DbConn>) -> Self {
+    pub fn new(client: cloudflare_client::CloudflareClient, db_pool: Pool<DbConn>) -> Self {
         Self { client, db_pool }
     }
 }
@@ -37,7 +38,7 @@ impl Executor for ExecutorService {
     ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request.clone());
 
-        let conn: PooledConnection<models::DbConn> = self
+        let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .await
@@ -83,7 +84,7 @@ impl Executor for ExecutorService {
     async fn unban(&self, unblock_request: UnblockRequest) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", unblock_request);
 
-        let conn: PooledConnection<models::DbConn> = self
+        let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .await

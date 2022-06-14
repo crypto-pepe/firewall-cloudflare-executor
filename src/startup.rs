@@ -3,7 +3,7 @@ use crate::configuration;
 use crate::executor;
 use crate::handlers;
 use crate::handlers::bans;
-use crate::models;
+use crate::pool::DbConn;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
@@ -25,7 +25,7 @@ impl Application {
         configuration: configuration::Settings,
         log_level_handle: Handle<EnvFilter, Formatter>,
         cloudflare_client: CloudflareClient,
-        pool: Pool<models::DbConn>,
+        pool: Pool<DbConn>,
     ) -> Result<Self, anyhow::Error> {
         let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
