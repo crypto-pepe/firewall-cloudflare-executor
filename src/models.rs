@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use strum_macros::Display;
 
+pub type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
+
 #[derive(Serialize)]
 pub struct FirewallRuleRequest {
     pub action: String,
@@ -133,5 +135,3 @@ mod tests {
         );
     }
 }
-
-pub type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;

@@ -8,12 +8,11 @@ pub mod executor;
 pub mod handlers;
 pub mod invalidator;
 pub mod models;
+pub mod pool;
 pub mod schema;
 pub mod startup;
 pub mod telemetry;
 
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
-use diesel::PgConnection;
 use std::process;
 
 use tracing::{error, info};
@@ -26,10 +25,7 @@ async fn main() {
         .expect("Failed to read configuration.");
     let (subscriber, log_filter_handler) = telemetry::get_subscriber(&configuration.clone());
     let cloudflare_client = configuration.clone().cloudflare.client();
-    let db_conn_string = configuration.clone().db.pg_conn_string();
-    let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(db_conn_string);
-    let pool = bb8::Pool::builder()
-        .build(pg_mgr)
+    let pool = pool::get_db_pool(configuration.db.clone().pg_conn_string())
         .await
         .expect("failed to create pool");
     let application = startup::Application::build(
@@ -43,7 +39,7 @@ async fn main() {
     let invalidator = invalidator::Invalidator::new(
         cloudflare_client,
         pool,
-        configuration.cloudflare.invalidation_timeout_string.into(),
+        configuration.cloudflare.invalidation_timeout.into(),
     );
     telemetry::init_subscriber(subscriber);
     info!("cloudflare-executor is up!");

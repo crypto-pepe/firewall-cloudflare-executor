@@ -30,7 +30,7 @@ pub struct CloudflareClientConfig {
     pub account_id: String,
     pub zone_id: String,
     pub token: String,
-    pub invalidation_timeout_string: DurationString,
+    pub invalidation_timeout: DurationString,
 }
 
 impl CloudflareClientConfig {
