@@ -30,7 +30,7 @@
 ```json
 {
     "dry_run": false,
-    "log_level": "error,firewall_executor=trace"
+    "log_level": "error,firewall_cloudflare_executor=trace"
 }
 ```
 

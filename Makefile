@@ -26,4 +26,4 @@ help:
 	@echo "usage: make $(prog) [debug=1]"
 
 lint:
-	cargo clippy --fix
+	cargo clippy --fix --allow-dirty

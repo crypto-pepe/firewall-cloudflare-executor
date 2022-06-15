@@ -6,6 +6,8 @@ cloudflare:
   account_id: ""
   token: ""
   zone_id: ""
+  invalidation_timeout: "1s"
+
 db:
   user: "postgres"
   password: "1234"

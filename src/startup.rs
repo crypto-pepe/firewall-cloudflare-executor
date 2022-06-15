@@ -1,12 +1,13 @@
+use crate::cloudflare_client::CloudflareClient;
 use crate::configuration;
 use crate::executor;
 use crate::handlers;
 use crate::handlers::bans;
+use crate::pool::DbConn;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
-use diesel::PgConnection;
+use bb8::Pool;
 use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
 use tracing::info;
@@ -16,7 +17,6 @@ use tracing_subscriber::reload::Handle;
 use tracing_subscriber::EnvFilter;
 
 pub struct Application {
-    port: u16,
     server: Server,
 }
 
@@ -24,17 +24,14 @@ impl Application {
     pub async fn build(
         configuration: configuration::Settings,
         log_level_handle: Handle<EnvFilter, Formatter>,
+        cloudflare_client: CloudflareClient,
+        pool: Pool<DbConn>,
     ) -> Result<Self, anyhow::Error> {
-        let cloudflare_client = configuration.cloudflare.client();
-        let db_conn_string = configuration.db.pg_conn_string();
-        let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(db_conn_string);
-        let pool = bb8::Pool::builder().build(pg_mgr).await?;
         let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
 
         let executor_service_op_run = executor::ExecutorService::new(cloudflare_client, pool);
         let executor_service_dry_run = executor::ExecutorServiceDryRun::new();
-        let port = listener.local_addr()?.port();
         let server = run(
             listener,
             log_level_handle,
@@ -43,11 +40,7 @@ impl Application {
         )
         .await?;
         info!("server is running on: {:?}", server_addr);
-        Ok(Self { port, server })
-    }
-
-    pub fn port(&self) -> u16 {
-        self.port
+        Ok(Self { server })
     }
 
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {

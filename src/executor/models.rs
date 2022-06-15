@@ -8,7 +8,8 @@ use crate::errors;
 pub struct BlockRequest {
     pub target: Target,
     pub reason: String,
-    pub ttl: i64,
+    #[serde(default)]
+    pub ttl: u64,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

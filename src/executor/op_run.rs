@@ -5,19 +5,17 @@ use crate::executor::models::Executor;
 use crate::executor::*;
 use crate::models;
 use crate::models::Nongrata;
+use crate::pool::DbConn;
 use crate::schema;
-use crate::schema::nongratas::restriction_value;
 
 use async_trait::async_trait;
 use bb8::Pool;
 use bb8::PooledConnection;
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
 use chrono::Utc;
 use diesel::prelude::*;
+use futures::future::join_all;
 
 use tracing::info;
-
-type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
 
 #[derive(Clone)]
 pub struct ExecutorService {
@@ -48,25 +46,26 @@ impl Executor for ExecutorService {
 
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
-        let firewall_rule =
-            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
-                .ok_or(errors::ServerError::EmptyRequest)?;
+        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
+            .ok_or(errors::ServerError::MissingTarget)?;
 
         let rule_id = self
             .client
-            .restrict_rule(
-                rule.target.ip,
-                rule.target.ua,
-                models::RestrictionType::Block,
-            )
+            .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
             .await
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
 
+        if block_request.ttl == 0 {
+            return Err(errors::ServerError::MissingTTL);
+        }
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
             rule_id,
             chrono::DateTime::<Utc>::from_utc(
-                chrono::NaiveDateTime::from_timestamp(block_request.ttl, 0),
+                chrono::NaiveDateTime::from_timestamp(
+                    block_request.ttl as i64 + chrono::offset::Utc::now().timestamp(),
+                    0,
+                ),
                 Utc,
             ),
             restriction_type.to_string(),
@@ -77,7 +76,7 @@ impl Executor for ExecutorService {
         diesel::insert_into(schema::nongratas::table)
             .values(nongrata)
             .execute(&*conn)
-            .map_err(|e| ServerError::from(e))?;
+            .map_err(ServerError::from)?;
 
         Ok(())
     }
@@ -92,29 +91,25 @@ impl Executor for ExecutorService {
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
         let rule = unblock_request;
-        let firewall_rule =
-            models::form_firewall_rule_expression(rule.target.ip.as_ref(), rule.target.ua.as_ref())
-                .ok_or(errors::ServerError::EmptyRequest)?;
-
-        let rule_id = schema::nongratas::table
+        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
+            .ok_or(errors::ServerError::MissingTarget)?;
+        let rule_ids = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)
-            .first::<String>(&*conn)
-            .map_err(|e| ServerError::from(e))?;
-
-        self.client
-            .restrict_rule(
-                rule.target.ip,
-                rule.target.ua,
-                models::RestrictionType::Unblock(rule_id),
-            )
-            .await
-            .map_err(|e| ServerError::from(e))?;
-
-        diesel::delete(schema::nongratas::table.filter(restriction_value.eq(firewall_rule)))
-            .execute(&*conn)
-            .map_err(|e| ServerError::from(e))?;
-
-        Ok(())
+            .load::<String>(&*conn)
+            .map_err(ServerError::from)?;
+        let handles = rule_ids
+            .iter()
+            .map(|id| self.client.delete_block_rule(id.clone()));
+        let handlers_iter = join_all(handles).await;
+        handlers_iter
+            .iter()
+            .zip(rule_ids.clone().iter())
+            .try_for_each(|(_, id)| {
+                diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
+                    .execute(&*conn)
+                    .map(|_| ())
+                    .map_err(ServerError::from)
+            })
     }
 }
