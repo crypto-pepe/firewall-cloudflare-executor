@@ -49,18 +49,18 @@ impl Executor for ExecutorService {
             models::form_firewall_rule_expression(rule.target.ip, rule.target.user_agent)
                 .ok_or(errors::ServerError::MissingTarget)?;
 
-        // let rule_id = self
-        //     .client
-        //     .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
-        //     .await
-        //     .map_err(ServerError::from)?;
+        let rule_id = self
+            .client
+            .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
+            .await
+            .map_err(ServerError::from)?;
 
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
         let nongrata = Nongrata::new(
             block_request.reason.clone(),
-            "".into(),
+            rule_id,
             chrono::DateTime::<Utc>::from_utc(
                 chrono::NaiveDateTime::from_timestamp(
                     block_request.ttl as i64 + chrono::offset::Utc::now().timestamp(),
