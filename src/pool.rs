@@ -7,7 +7,7 @@ pub type DbConn = ConnectionManager<PgConnection>;
 
 pub async fn get_db_pool(conn_string: String) -> Result<Pool<DbConn>, ServerError> {
     let pg_mgr = ConnectionManager::new(conn_string);
-    return Pool::builder()
+    Pool::builder()
         .build(pg_mgr)
-        .map_err(|e| ServerError::PoolError(e.to_string()));
+        .map_err(|e| ServerError::PoolError(e.to_string()))
 }
