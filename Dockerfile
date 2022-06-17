@@ -24,7 +24,7 @@ RUN cargo build --release
 
 FROM alpine
 WORKDIR /usr/lib/pepe
-RUN apk add --no-cache libgcc
+RUN apk add --no-cache libgcc libpq-dev
 
 COPY --from=builder /usr/lib/pepe/target/release/service .
 COPY --from=builder /usr/lib/pepe/migrations .
