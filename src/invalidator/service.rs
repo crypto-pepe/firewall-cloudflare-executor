@@ -51,7 +51,7 @@ impl Invalidator {
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
         let rule_ids = schema::nongratas::table
             .filter(
-                schema::nongratas::expires_at.ge(chrono::DateTime::<Utc>::from_utc(
+                schema::nongratas::expires_at.le(chrono::DateTime::<Utc>::from_utc(
                     chrono::NaiveDateTime::from_timestamp(
                         chrono::offset::Utc::now().timestamp(),
                         0,
