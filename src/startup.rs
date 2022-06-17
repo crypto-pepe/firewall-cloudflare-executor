@@ -7,7 +7,7 @@ use crate::pool::DbConn;
 
 use actix_web::dev::Server;
 use actix_web::{web, App, HttpServer};
-use bb8::Pool;
+use diesel::r2d2::Pool;
 use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
 use tracing::info;
@@ -65,7 +65,7 @@ async fn run(
             .app_data(web::Data::new(log_level_handle.clone()))
             .app_data(web::Data::new(executor_service_op.clone()))
             .app_data(web::Data::new(executor_service_dry_run.clone()))
-            .app_data(web::Data::new(is_dry_run.clone()))
+            .app_data(is_dry_run.clone())
     })
     .listen(listener)?
     .run();

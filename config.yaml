@@ -15,5 +15,5 @@ db:
   host: "127.0.0.1"
   port: "5431"
 tracing:
-  svc_name: ""
-  jaeger_endpoint: ""
+  svc_name: "firewall-analyzer"
+#   jaeger_endpoint: ""

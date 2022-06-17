@@ -20,7 +20,7 @@ pub struct UnblockRequest {
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Target {
     pub ip: Option<String>,
-    pub ua: Option<String>,
+    pub user_agent: Option<String>,
 }
 
 #[async_trait]

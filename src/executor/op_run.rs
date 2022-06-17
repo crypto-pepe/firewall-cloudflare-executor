@@ -9,10 +9,10 @@ use crate::pool::DbConn;
 use crate::schema;
 
 use async_trait::async_trait;
-use bb8::Pool;
-use bb8::PooledConnection;
 use chrono::Utc;
 use diesel::prelude::*;
+use diesel::r2d2::Pool;
+use diesel::r2d2::PooledConnection;
 use futures::future::join_all;
 
 use tracing::info;
@@ -41,13 +41,13 @@ impl Executor for ExecutorService {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
-            .await
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
         let rule = block_request.clone();
         let restriction_type = models::RestrictionType::Block;
-        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
-            .ok_or(errors::ServerError::MissingTarget)?;
+        let firewall_rule =
+            models::form_firewall_rule_expression(rule.target.ip, rule.target.user_agent)
+                .ok_or(errors::ServerError::MissingTarget)?;
 
         let rule_id = self
             .client
@@ -87,12 +87,12 @@ impl Executor for ExecutorService {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
-            .await
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
         let rule = unblock_request;
-        let firewall_rule = models::form_firewall_rule_expression(rule.target.ip, rule.target.ua)
-            .ok_or(errors::ServerError::MissingTarget)?;
+        let firewall_rule =
+            models::form_firewall_rule_expression(rule.target.ip, rule.target.user_agent)
+                .ok_or(errors::ServerError::MissingTarget)?;
         let rule_ids = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
             .select(schema::nongratas::rule_id)

@@ -2,10 +2,10 @@ use crate::pool::DbConn;
 use crate::schema;
 use crate::{cloudflare_client::CloudflareClient, errors::ServerError};
 
-use bb8::Pool;
-use bb8::PooledConnection;
 use chrono::Utc;
 use diesel::prelude::*;
+use diesel::r2d2::Pool;
+use diesel::r2d2::PooledConnection;
 use futures::future::join_all;
 use std::time::Duration;
 use tokio::{task, time};
@@ -48,7 +48,6 @@ impl Invalidator {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
-            .await
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
         let rule_ids = schema::nongratas::table
             .filter(

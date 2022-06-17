@@ -10,5 +10,5 @@ create table if not exists nongratas (
     primary key (id)
 );
 
-create index concurrently if not exists nongratas_restriction_value_rule_id_idx
+create index if not exists nongratas_restriction_value_rule_id_idx
 on nongratas using btree (restriction_value, rule_id);
