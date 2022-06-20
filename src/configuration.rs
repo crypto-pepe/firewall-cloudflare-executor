@@ -1,30 +1,31 @@
+use crate::cloudflare_client::CloudflareClient;
 use pepe_config::{self, DurationString};
 use serde::{Deserialize, Serialize};
 
-use crate::cloudflare_client::CloudflareClient;
-
 pub const DEFAULT_CFG_PATH: &str = include_str!("../config.yaml");
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Settings {
+    pub dry_run: bool,
     pub server: ServerConfig,
     pub cloudflare: CloudflareClientConfig,
     pub db: DbConfig,
     pub tracing: TracingConfig,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
 }
+
 impl ServerConfig {
     pub fn get_address(self) -> String {
         format!("{}:{}", self.host, self.port)
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct CloudflareClientConfig {
     pub base_url: String,
     pub account_id: String,
@@ -39,7 +40,7 @@ impl CloudflareClientConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct DbConfig {
     user: String,
     password: String,
@@ -47,14 +48,16 @@ pub struct DbConfig {
     host: String,
     port: String,
 }
+
 impl DbConfig {
     pub fn pg_conn_string(self) -> String {
         format!(
-            "postgres://{}:{}@{}/{}",
-            self.user, self.password, self.host, self.db
+            "postgres://{}:{}@{}:{}/{}",
+            self.user, self.password, self.host, self.port, self.db
         )
     }
 }
+
 pub fn get_config(path: &str) -> Result<Settings, pepe_config::ConfigError> {
     pepe_config::load(path, pepe_config::FileFormat::Yaml)
 }

@@ -1,15 +1,13 @@
 use crate::errors::ServerError;
 
-use bb8::Pool;
-use bb8_diesel::{DieselConnection, DieselConnectionManager};
-use diesel::PgConnection;
+use diesel::pg::PgConnection;
+use diesel::r2d2::{ConnectionManager, Pool};
 
-pub type DbConn = DieselConnectionManager<DieselConnection<PgConnection>>;
+pub type DbConn = ConnectionManager<PgConnection>;
 
 pub async fn get_db_pool(conn_string: String) -> Result<Pool<DbConn>, ServerError> {
-    let pg_mgr = DieselConnectionManager::<DieselConnection<PgConnection>>::new(conn_string);
-    return bb8::Pool::builder()
+    let pg_mgr = ConnectionManager::new(conn_string);
+    Pool::builder()
         .build(pg_mgr)
-        .await
-        .map_err(|e| ServerError::PoolError(e.to_string()));
+        .map_err(|e| ServerError::PoolError(e.to_string()))
 }

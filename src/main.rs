@@ -42,6 +42,7 @@ async fn main() {
         configuration.cloudflare.invalidation_timeout.into(),
     );
     telemetry::init_subscriber(subscriber);
+
     info!("cloudflare-executor is up!");
     let server_task = tokio::spawn(application.run_until_stopped());
     let invalidator_task = tokio::spawn(invalidator.run_untill_stopped());
@@ -53,8 +54,10 @@ async fn main() {
                 process::exit(1);
             }
             Ok(Ok(())) => process::exit(0),
-            _ => process::exit(2),
-
+            Ok(Err(e))  => {
+                error!("Cloudflare-executor failed with {}", e);
+                process::exit(2);
+            }
         },
         invalidator_exit = invalidator_task => match invalidator_exit{
             Err(e) => {
@@ -62,7 +65,10 @@ async fn main() {
                 process::exit(1);
             }
             Ok(Ok(()))  => process::exit(0),
-            _ => process::exit(2),
+            Ok(Err(e))  => {
+                error!("Cloudflare-invalidator failed with {}", e);
+                process::exit(2);
+            }
         }
     };
 }

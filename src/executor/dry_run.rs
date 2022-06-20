@@ -21,7 +21,7 @@ impl Executor for ExecutorServiceDryRun {
         analyzer_id: String,
     ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request);
-        let ua = block_request.target.ua;
+        let ua = block_request.target.user_agent;
         let ip = block_request.target.ip;
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
@@ -36,7 +36,7 @@ impl Executor for ExecutorServiceDryRun {
     }
     async fn unban(&self, unblock_request: UnblockRequest) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", unblock_request);
-        let ua = unblock_request.target.ua;
+        let ua = unblock_request.target.user_agent;
         let ip = unblock_request.target.ip;
         let rule = models::form_firewall_rule_expression(ip, ua);
         rule.clone().ok_or(ServerError::MissingTarget)?;
