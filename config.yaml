@@ -16,4 +16,4 @@ db:
   port: "5431"
 tracing:
   svc_name: "firewall-cloudflare-executor"
-  jaeger_endpoint: ""
+# jaeger_endpoint: ""
