@@ -27,8 +27,8 @@ impl Application {
         cloudflare_client: CloudflareClient,
         pool: Pool<DbConn>,
     ) -> Result<Self, anyhow::Error> {
-        let cfg = configuration.server.clone();
-        let server_addr = cfg.clone().get_address();
+        let cfg = configuration.clone();
+        let server_addr = configuration.server.get_address();
         let listener = TcpListener::bind(&server_addr)?;
         let dry_run = cfg.dry_run;
         let executor_service_op_run = executor::ExecutorService::new(cloudflare_client, pool);

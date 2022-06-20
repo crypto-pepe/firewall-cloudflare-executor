@@ -6,6 +6,7 @@ pub const DEFAULT_CFG_PATH: &str = include_str!("../config.yaml");
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Settings {
+    pub dry_run: bool,
     pub server: ServerConfig,
     pub cloudflare: CloudflareClientConfig,
     pub db: DbConfig,
@@ -16,8 +17,8 @@ pub struct Settings {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
-    pub dry_run: bool,
 }
+
 impl ServerConfig {
     pub fn get_address(self) -> String {
         format!("{}:{}", self.host, self.port)
@@ -47,6 +48,7 @@ pub struct DbConfig {
     host: String,
     port: String,
 }
+
 impl DbConfig {
     pub fn pg_conn_string(self) -> String {
         format!(
@@ -55,6 +57,7 @@ impl DbConfig {
         )
     }
 }
+
 pub fn get_config(path: &str) -> Result<Settings, pepe_config::ConfigError> {
     pepe_config::load(path, pepe_config::FileFormat::Yaml)
 }

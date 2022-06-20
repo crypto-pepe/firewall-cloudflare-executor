@@ -1,14 +1,13 @@
+dry_run: false
 server:
   host: 127.0.0.1
   port: 9999
-  dry_run: false
 cloudflare:
   base_url: https://api.cloudflare.com/client/v4/
   account_id: ""
   token: ""
   zone_id: ""
   invalidation_timeout: "1s"
-
 db:
   user: "postgres"
   password: "1234"
@@ -16,5 +15,5 @@ db:
   host: "127.0.0.1"
   port: "5431"
 tracing:
-  svc_name: "firewall-analyzer"
-#   jaeger_endpoint: ""
+  svc_name: "firewall-cloudflare-executor"
+  jaeger_endpoint: ""
