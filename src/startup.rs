@@ -27,14 +27,16 @@ impl Application {
         cloudflare_client: CloudflareClient,
         pool: Pool<DbConn>,
     ) -> Result<Self, anyhow::Error> {
-        let server_addr = configuration.server.get_address();
+        let cfg = configuration.server.clone();
+        let server_addr = cfg.clone().get_address();
         let listener = TcpListener::bind(&server_addr)?;
-
+        let dry_run = cfg.dry_run;
         let executor_service_op_run = executor::ExecutorService::new(cloudflare_client, pool);
         let executor_service_dry_run = executor::ExecutorServiceDryRun::new();
         let server = run(
             listener,
             log_level_handle,
+            dry_run,
             executor_service_op_run.clone(),
             executor_service_dry_run.clone(),
         )
@@ -50,10 +52,11 @@ impl Application {
 async fn run(
     listener: TcpListener,
     log_level_handle: Handle<EnvFilter, Formatter>,
+    dry_run: bool,
     executor_service_op: executor::ExecutorService,
     executor_service_dry_run: executor::ExecutorServiceDryRun,
 ) -> Result<Server, std::io::Error> {
-    let is_dry_run = web::Data::new(AtomicBool::new(false));
+    let is_dry_run = web::Data::new(AtomicBool::new(dry_run));
 
     let server = HttpServer::new(move || {
         App::new()

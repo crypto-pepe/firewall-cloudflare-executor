@@ -19,14 +19,12 @@ use tracing::{error, info};
 
 #[tokio::main]
 async fn main() {
-    std::env::set_var("RUST_LOG", "info,actix_web=trace");
     tracing::info!("start application");
 
     let configuration = configuration::get_config(configuration::DEFAULT_CFG_PATH)
         .expect("Failed to read configuration.");
     let (subscriber, log_filter_handler) = telemetry::get_subscriber(&configuration.clone());
     let cloudflare_client = configuration.clone().cloudflare.client();
-    println!("{:?}", configuration);
     let pool = pool::get_db_pool(configuration.db.clone().pg_conn_string())
         .await
         .expect("failed to create pool");

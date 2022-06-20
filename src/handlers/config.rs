@@ -14,7 +14,6 @@ pub async fn config(
     log_level: web::Data<Handle<EnvFilter, Formatter>>,
     req: web::Json<handlers::models::AdminRequest>,
 ) -> HttpResponse {
-    warn!(req.dry_run);
     let dry_run = is_dry_run.get_ref();
     if let Some(dry_run_switch) = req.dry_run {
         dry_run.store(dry_run_switch, Ordering::Relaxed)
