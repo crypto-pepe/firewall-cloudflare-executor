@@ -38,10 +38,10 @@ impl CloudflareClient {
     ) -> Result<String> {
         info!("Will block globally: {}", expr);
 
-        let req = models::FirewallRuleRequest {
+        let req = vec![models::FirewallRuleRequest {
             action: restriction_type.to_string(),
             filter: models::Filter { expression: expr },
-        };
+        }];
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
         let resp = self
@@ -54,10 +54,15 @@ impl CloudflareClient {
             .await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
-            return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
+            return Err(errors::ServerError::Unsuccessfull {
+                info: resp.errors.into_iter().map(|v| v.message).collect(),
+            }
+            .into());
         };
-        let value = resp
-            .result
+        let value = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+            cause: "bad response".to_string(),
+        })?;
+        let value = value
             .first()
             .ok_or::<ServerError>(ServerError::WrappedErr {
                 cause: "bad response".to_string(),
@@ -73,14 +78,13 @@ impl CloudflareClient {
             .http_client
             .delete(format!("{}{}", self.base_api_url, path))
             .send()
-            .await
-            .map_err(ServerError::from)?
-            .json::<models::FirewallRuleResponse>()
-            .await
-            .map_err(ServerError::from)?;
+            .await?;
+        let resp = resp.json::<models::FirewallDeleteRuleResponse>().await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
-            return Err(errors::ServerError::Unsuccessfull { info: resp.errors });
+            return Err(errors::ServerError::Unsuccessfull {
+                info: resp.errors.into_iter().map(|v| v.message).collect(),
+            });
         };
         Ok(())
     }

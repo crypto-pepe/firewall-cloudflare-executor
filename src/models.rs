@@ -19,15 +19,30 @@ pub struct Filter {
 #[derive(Deserialize)]
 pub struct FirewallRuleResponse {
     pub success: bool,
-    pub result: Vec<ResultResp>,
-    pub errors: Vec<String>,
+    pub result: Option<Vec<ResultResp>>,
+    pub errors: Vec<Errors>,
+}
+
+#[derive(Deserialize)]
+pub struct FirewallDeleteRuleResponse {
+    pub success: bool,
+    pub result: Option<ResultResp>,
+    pub errors: Vec<Errors>,
 }
 
 #[derive(Deserialize)]
 pub struct ResultResp {
     pub id: String,
 }
-#[derive(Debug, Display, PartialEq)]
+
+#[derive(Deserialize)]
+pub struct Errors {
+    pub message: String,
+    pub code: u16,
+}
+
+#[derive(Debug, Display, PartialEq, Serialize)]
+#[strum(serialize_all = "lowercase")]
 pub enum RestrictionType {
     Block,
     Challenge,

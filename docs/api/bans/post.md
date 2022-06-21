@@ -23,14 +23,14 @@ Bans target with provided details.
 **Request examples**
 
 ```json
-{
-    "target": {
-        "ip": "11.12.13.14",
-        "user_agent": "curl user-agent"
-    },
-    "reason": "Exceeded requests per minute limit, excess 2.0",
-    "ttl": 300
-}
+    {
+        "target": {
+            "ip": "11.12.13.14",
+            "user_agent": "curl user-agent"
+        },
+        "reason": "Exceeded requests per minute limit, excess 2.0",
+        "ttl": 300
+    }
 ```
 
 ```json
