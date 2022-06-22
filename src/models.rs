@@ -1,7 +1,7 @@
 use crate::schema::nongratas::{self};
 
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use std::str::FromStr;
 use strum_macros::Display;
 
@@ -16,18 +16,8 @@ pub struct Filter {
     pub expression: String,
 }
 
-#[derive(Deserialize)]
-pub struct FirewallRuleResponse {
-    pub success: bool,
-    pub result: Vec<ResultResp>,
-    pub errors: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct ResultResp {
-    pub id: String,
-}
-#[derive(Debug, Display, PartialEq)]
+#[derive(Debug, Display, PartialEq, Serialize)]
+#[strum(serialize_all = "lowercase")]
 pub enum RestrictionType {
     Block,
     Challenge,

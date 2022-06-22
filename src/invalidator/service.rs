@@ -6,7 +6,7 @@ use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::Pool;
 use diesel::r2d2::PooledConnection;
-use futures::future::join_all;
+use futures::future::try_join_all;
 use std::time::Duration;
 use tokio::{task, time};
 
@@ -62,11 +62,11 @@ impl Invalidator {
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
             .map_err(ServerError::from)?;
-        let handlers = rule_ids
+        let handles = rule_ids
             .iter()
             .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
-        let handlers = join_all(handlers).await;
-        handlers
+        let handles = try_join_all(handles).await?;
+        handles
             .iter()
             .zip(rule_ids.clone().iter())
             .try_for_each(|(_, id)| {

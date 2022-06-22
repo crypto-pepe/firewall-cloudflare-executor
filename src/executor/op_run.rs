@@ -13,8 +13,8 @@ use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::Pool;
 use diesel::r2d2::PooledConnection;
-use futures::future::join_all;
 
+use futures::future::try_join_all;
 use tracing::info;
 
 #[derive(Clone)]
@@ -101,8 +101,8 @@ impl Executor for ExecutorService {
         let handles = rule_ids
             .iter()
             .map(|id| self.client.delete_block_rule(id.clone()));
-        let handlers_iter = join_all(handles).await;
-        handlers_iter
+        let handles = try_join_all(handles).await?;
+        handles
             .iter()
             .zip(rule_ids.clone().iter())
             .try_for_each(|(_, id)| {

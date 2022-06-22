@@ -30,6 +30,7 @@ impl CloudflareClient {
             zone_id,
         }
     }
+
     #[tracing::instrument()]
     pub async fn create_block_rule(
         &self,
@@ -38,10 +39,10 @@ impl CloudflareClient {
     ) -> Result<String> {
         info!("Will block globally: {}", expr);
 
-        let req = models::FirewallRuleRequest {
+        let req = vec![models::FirewallRuleRequest {
             action: restriction_type.to_string(),
             filter: models::Filter { expression: expr },
-        };
+        }];
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
         let resp = self
@@ -50,20 +51,26 @@ impl CloudflareClient {
             .json(&req)
             .send()
             .await?
-            .json::<models::FirewallRuleResponse>()
+            .json::<model::CreateRuleResponse>()
             .await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
-            return Err(errors::ServerError::Unsuccessfull { info: resp.errors }.into());
+            return Err(errors::ServerError::Unsuccessfull {
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
+            }
+            .into());
         };
-        let value = resp
-            .result
+        let rules = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+            cause: "bad response".to_string(),
+        })?;
+        let rule = rules
             .first()
             .ok_or::<ServerError>(ServerError::WrappedErr {
                 cause: "bad response".to_string(),
             })?;
-        Ok(value.id.clone())
+        Ok(rule.id.clone())
     }
+
     #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
         info!("Will delete rule id {}: ttl reached", rule_id);
@@ -73,15 +80,41 @@ impl CloudflareClient {
             .http_client
             .delete(format!("{}{}", self.base_api_url, path))
             .send()
-            .await
-            .map_err(ServerError::from)?
-            .json::<models::FirewallRuleResponse>()
-            .await
-            .map_err(ServerError::from)?;
+            .await?;
+        let resp = resp.json::<model::DeleteRuleResponse>().await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
-            return Err(errors::ServerError::Unsuccessfull { info: resp.errors });
+            return Err(errors::ServerError::Unsuccessfull {
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
+            });
         };
         Ok(())
+    }
+}
+
+mod model {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    pub(super) struct CreateRuleResponse {
+        pub success: bool,
+        pub result: Option<Vec<Rule>>,
+        pub errors: Vec<Error>,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct DeleteRuleResponse {
+        pub success: bool,
+        pub errors: Vec<Error>,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct Rule {
+        pub id: String,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct Error {
+        pub message: String,
     }
 }
