@@ -17,17 +17,17 @@ pub struct Filter {
 }
 
 #[derive(Deserialize)]
-pub struct FirewallRuleResponse {
+pub struct RuleResponse {
     pub success: bool,
     pub result: Option<Vec<ResultResp>>,
-    pub errors: Vec<Errors>,
+    pub errors: Vec<Error>,
 }
 
 #[derive(Deserialize)]
-pub struct FirewallDeleteRuleResponse {
+pub struct DeleteRuleResponse {
     pub success: bool,
     pub result: Option<ResultResp>,
-    pub errors: Vec<Errors>,
+    pub errors: Vec<Error>,
 }
 
 #[derive(Deserialize)]
@@ -36,7 +36,7 @@ pub struct ResultResp {
 }
 
 #[derive(Deserialize)]
-pub struct Errors {
+pub struct Error {
     pub message: String,
     pub code: u16,
 }

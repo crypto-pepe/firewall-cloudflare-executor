@@ -62,11 +62,11 @@ impl Invalidator {
             .select(schema::nongratas::rule_id)
             .load::<String>(&*conn)
             .map_err(ServerError::from)?;
-        let handlers = rule_ids
+        let handles = rule_ids
             .iter()
             .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
-        let handlers = try_join_all(handlers).await?;
-        handlers
+        let handles = try_join_all(handles).await?;
+        handles
             .iter()
             .zip(rule_ids.clone().iter())
             .try_for_each(|(_, id)| {

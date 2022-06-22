@@ -101,8 +101,8 @@ impl Executor for ExecutorService {
         let handles = rule_ids
             .iter()
             .map(|id| self.client.delete_block_rule(id.clone()));
-        let handles_iter = try_join_all(handles).await?;
-        handles_iter
+        let handles = try_join_all(handles).await?;
+        handles
             .iter()
             .zip(rule_ids.clone().iter())
             .try_for_each(|(_, id)| {

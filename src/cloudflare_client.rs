@@ -50,24 +50,25 @@ impl CloudflareClient {
             .json(&req)
             .send()
             .await?
-            .json::<models::FirewallRuleResponse>()
+            .json::<models::RuleResponse>()
             .await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
-                info: resp.errors.into_iter().map(|v| v.message).collect(),
+                cause: resp.errors.into_iter().map(|v| v.message).collect(),
             }
             .into());
         };
-        let value = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+        let result_response = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
             cause: "bad response".to_string(),
         })?;
-        let value = value
-            .first()
-            .ok_or::<ServerError>(ServerError::WrappedErr {
-                cause: "bad response".to_string(),
-            })?;
-        Ok(value.id.clone())
+        let result_response =
+            result_response
+                .first()
+                .ok_or::<ServerError>(ServerError::WrappedErr {
+                    cause: "bad response".to_string(),
+                })?;
+        Ok(result_response.id.clone())
     }
     #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
@@ -79,11 +80,11 @@ impl CloudflareClient {
             .delete(format!("{}{}", self.base_api_url, path))
             .send()
             .await?;
-        let resp = resp.json::<models::FirewallDeleteRuleResponse>().await?;
+        let resp = resp.json::<models::DeleteRuleResponse>().await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
-                info: resp.errors.into_iter().map(|v| v.message).collect(),
+                cause: resp.errors.into_iter().map(|v| v.message).collect(),
             });
         };
         Ok(())
