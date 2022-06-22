@@ -1,7 +1,6 @@
 use crate::handlers;
 
 use actix_web::HttpResponse;
-use serde_json::json;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -33,13 +32,21 @@ pub enum ServerError {
 impl From<ServerError> for HttpResponse {
     fn from(v: ServerError) -> Self {
         match v {
-            ServerError::Unsuccessfull { errors } => HttpResponse::BadGateway().json(errors),
+            ServerError::Unsuccessfull { errors } => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(
+                    errors.into_iter().map(|e| e.to_string()).collect(),
+                ),
+            ),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
-            ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
-            ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),
-            ServerError::ClientError(source) => {
-                HttpResponse::InternalServerError().json(source.to_string())
-            }
+            ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(cause.to_string()),
+            ),
+            ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(cause.to_string()),
+            ),
+            ServerError::ClientError(source) => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(source.to_string()),
+            ),
             ServerError::MissingTarget => {
                 HttpResponse::BadRequest().json(handlers::models::ExecutorResponse::no_target())
             }
@@ -50,12 +57,12 @@ impl From<ServerError> for HttpResponse {
                 .json(handlers::models::ExecutorResponse::wrong_log_level()),
             ServerError::MissingDryRunStatus => HttpResponse::BadRequest()
                 .json(handlers::models::ExecutorResponse::no_dry_run_status()),
-            ServerError::DBError(source) => {
-                HttpResponse::InternalServerError().json(source.to_string())
-            }
-            ServerError::Other(source) => HttpResponse::InternalServerError().json(json!({
-                "reason": source.to_string()
-            })),
+            ServerError::DBError(source) => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(source.to_string()),
+            ),
+            ServerError::Other(source) => HttpResponse::InternalServerError().json(
+                handlers::models::ExecutorResponse::internal(source.to_string()),
+            ),
         }
     }
 }

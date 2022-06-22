@@ -71,9 +71,9 @@ impl ExecutorResponse {
             }),
         }
     }
-    pub fn bad_request(reason: String) -> Self {
+    pub fn internal(reason: String) -> Self {
         Self {
-            code: StatusCode::BAD_REQUEST.as_u16(),
+            code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
             reason,
             details: None,
         }
