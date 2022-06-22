@@ -6,8 +6,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ServerError {
-    #[error("CF responded unsuccessfull: {cause:?})")]
-    Unsuccessfull { cause: Vec<String> },
+    #[error("CF responded unsuccessfull: {errors:?})")]
+    Unsuccessfull { errors: Vec<String> },
     #[error("Request body overflow")]
     Overflow,
     #[error("HTTP client error: {0}")]
@@ -33,7 +33,7 @@ pub enum ServerError {
 impl From<ServerError> for HttpResponse {
     fn from(v: ServerError) -> Self {
         match v {
-            ServerError::Unsuccessfull { cause } => HttpResponse::BadGateway().json(cause),
+            ServerError::Unsuccessfull { errors } => HttpResponse::BadGateway().json(errors),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
             ServerError::WrappedErr { cause } => HttpResponse::InternalServerError().json(cause),
             ServerError::PoolError(cause) => HttpResponse::InternalServerError().json(cause),

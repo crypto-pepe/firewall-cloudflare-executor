@@ -30,6 +30,7 @@ impl CloudflareClient {
             zone_id,
         }
     }
+
     #[tracing::instrument()]
     pub async fn create_block_rule(
         &self,
@@ -50,26 +51,26 @@ impl CloudflareClient {
             .json(&req)
             .send()
             .await?
-            .json::<models::RuleResponse>()
+            .json::<model::CreateRuleResponse>()
             .await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
-                cause: resp.errors.into_iter().map(|v| v.message).collect(),
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
             }
             .into());
         };
-        let result_response = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+        let rules = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
             cause: "bad response".to_string(),
         })?;
-        let result_response =
-            result_response
-                .first()
-                .ok_or::<ServerError>(ServerError::WrappedErr {
-                    cause: "bad response".to_string(),
-                })?;
-        Ok(result_response.id.clone())
+        let rule = rules
+            .first()
+            .ok_or::<ServerError>(ServerError::WrappedErr {
+                cause: "bad response".to_string(),
+            })?;
+        Ok(rule.id.clone())
     }
+
     #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
         info!("Will delete rule id {}: ttl reached", rule_id);
@@ -80,13 +81,40 @@ impl CloudflareClient {
             .delete(format!("{}{}", self.base_api_url, path))
             .send()
             .await?;
-        let resp = resp.json::<models::DeleteRuleResponse>().await?;
+        let resp = resp.json::<model::DeleteRuleResponse>().await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
-                cause: resp.errors.into_iter().map(|v| v.message).collect(),
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
             });
         };
         Ok(())
+    }
+}
+
+mod model {
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    pub(super) struct CreateRuleResponse {
+        pub success: bool,
+        pub result: Option<Vec<Rule>>,
+        pub errors: Vec<Error>,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct DeleteRuleResponse {
+        pub success: bool,
+        pub errors: Vec<Error>,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct Rule {
+        pub id: String,
+    }
+
+    #[derive(Deserialize)]
+    pub(super) struct Error {
+        pub message: String,
     }
 }
