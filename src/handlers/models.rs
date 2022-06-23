@@ -78,4 +78,11 @@ impl ExecutorResponse {
             details: None,
         }
     }
+    pub fn bad_request(reason: String) -> Self {
+        Self {
+            code: StatusCode::BAD_REQUEST.as_u16(),
+            reason,
+            details: None,
+        }
+    }
 }
