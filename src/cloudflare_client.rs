@@ -39,9 +39,9 @@ impl CloudflareClient {
     ) -> Result<String> {
         info!("Will block globally: {}", expr);
 
-        let req = vec![models::FirewallRuleRequest {
+        let req = vec![model::CreateRuleRequest {
             action: restriction_type.to_string(),
-            filter: models::Filter { expression: expr },
+            filter: model::Filter { expression: expr },
         }];
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
@@ -74,11 +74,16 @@ impl CloudflareClient {
     #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
         info!("Will delete rule id {}: ttl reached", rule_id);
+
+        let req = model::DeleteRuleRequest {
+            delete_filter_if_unused: true,
+        };
         let path = format!("zones/{}/firewall/rules/{}", self.zone_id, rule_id);
 
         let resp = self
             .http_client
             .delete(format!("{}{}", self.base_api_url, path))
+            .json(&req)
             .send()
             .await?;
         let resp = resp.json::<model::DeleteRuleResponse>().await?;
@@ -93,7 +98,7 @@ impl CloudflareClient {
 }
 
 mod model {
-    use serde::Deserialize;
+    use serde::{Deserialize, Serialize};
 
     #[derive(Deserialize)]
     pub(super) struct CreateRuleResponse {
@@ -116,5 +121,20 @@ mod model {
     #[derive(Deserialize)]
     pub(super) struct Error {
         pub message: String,
+    }
+    #[derive(Serialize)]
+    pub struct CreateRuleRequest {
+        pub action: String,
+        pub filter: Filter,
+    }
+
+    #[derive(Serialize)]
+    pub struct DeleteRuleRequest {
+        pub delete_filter_if_unused: bool,
+    }
+
+    #[derive(Serialize)]
+    pub struct Filter {
+        pub expression: String,
     }
 }
