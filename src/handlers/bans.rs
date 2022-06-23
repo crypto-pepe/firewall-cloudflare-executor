@@ -13,6 +13,9 @@ pub async fn ban_according_to_mode(
     is_dry_run: web::Data<AtomicBool>,
 ) -> HttpResponse {
     let block_request = req.0;
+    if block_request.ttl == 0 {
+        return errors::ServerError::MissingTTL.into();
+    }
     let restriction_result: Result<(), errors::ServerError>;
     let analyzer_id = get_x_analyzer_id_header(&http_req);
 

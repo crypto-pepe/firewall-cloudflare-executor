@@ -36,7 +36,7 @@ impl Executor for ExecutorService {
         block_request: BlockRequest,
         analyzer_id: String,
     ) -> Result<(), errors::ServerError> {
-        info!("Incoming request:{:?}", block_request.clone());
+        info!("Incoming request:{:?}", block_request);
 
         let conn: PooledConnection<DbConn> = self
             .db_pool
@@ -48,15 +48,14 @@ impl Executor for ExecutorService {
         let firewall_rule =
             models::form_firewall_rule_expression(rule.target.ip, rule.target.user_agent)
                 .ok_or(errors::ServerError::MissingTarget)?;
-        let rule_ids = schema::nongratas::table
-            .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()))
+        let rule_id = schema::nongratas::table
+            .filter(schema::nongratas::restriction_value.eq(&firewall_rule))
             .select(schema::nongratas::rule_id)
-            .load::<String>(&*conn)
+            .first::<String>(&*conn)
             .map_err(ServerError::from)?;
-        if rule_ids.len() > 0 {
+        if !rule_id.is_empty() {
             let target = schema::nongratas::table
-                .filter(schema::nongratas::restriction_value.eq(firewall_rule.clone()));
-
+                .filter(schema::nongratas::restriction_value.eq(&firewall_rule));
             diesel::update(target)
                 .set(
                     schema::nongratas::expires_at.eq(chrono::DateTime::<Utc>::from_utc(
@@ -75,10 +74,6 @@ impl Executor for ExecutorService {
                 .create_block_rule(firewall_rule.clone(), models::RestrictionType::Block)
                 .await
                 .map_err(ServerError::from)?;
-
-            if block_request.ttl == 0 {
-                return Err(errors::ServerError::MissingTTL);
-            }
 
             let nongrata = Nongrata::new(
                 block_request.reason.clone(),
