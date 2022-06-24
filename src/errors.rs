@@ -32,7 +32,7 @@ pub enum ServerError {
 impl From<ServerError> for HttpResponse {
     fn from(v: ServerError) -> Self {
         match v {
-            ServerError::Unsuccessfull { errors } => HttpResponse::BadRequest().json(
+            ServerError::Unsuccessfull { errors } => HttpResponse::InternalServerError().json(
                 handlers::models::ExecutorResponse::internal(errors.into_iter().collect()),
             ),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),

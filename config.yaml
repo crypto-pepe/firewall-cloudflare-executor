@@ -4,9 +4,9 @@ server:
   port: 9999
 cloudflare:
   base_url: https://api.cloudflare.com/client/v4/
-  account_id: "6b7610a08ea0b01e6e1211455fbc00e8"
-  token: "XeNLbIvvlTu_YtMnA3le2IASMK6SGxyzwg3D6Ugi"
-  zone_id: "82fda96b998b619c821f72ceed55e427"
+  account_id: ""
+  token: ""
+  zone_id: ""
   invalidation_timeout: "1s"
 db:
   user: "postgres"
