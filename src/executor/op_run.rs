@@ -51,7 +51,7 @@ impl Executor for ExecutorService {
         let rule_id = schema::nongratas::table
             .filter(schema::nongratas::restriction_value.eq(&firewall_rule))
             .select(schema::nongratas::rule_id)
-            .first::<String>(&*conn)
+            .load::<String>(&*conn)
             .map_err(ServerError::from)?;
         if !rule_id.is_empty() {
             let target = schema::nongratas::table
