@@ -75,15 +75,11 @@ impl CloudflareClient {
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
         info!("Will delete rule id {}", rule_id);
 
-        let req = model::DeleteRuleRequest {
-            delete_filter_if_unused: true,
-        };
         let path = format!("zones/{}/firewall/rules/{}", self.zone_id, rule_id);
 
         let resp = self
             .http_client
             .delete(format!("{}{}", self.base_api_url, path))
-            .json(&req)
             .query(&[("delete_filter_if_unused", true)])
             .send()
             .await?;
@@ -127,11 +123,6 @@ mod model {
     pub struct CreateRuleRequest {
         pub action: String,
         pub filter: Filter,
-    }
-
-    #[derive(Serialize)]
-    pub struct DeleteRuleRequest {
-        pub delete_filter_if_unused: bool,
     }
 
     #[derive(Serialize)]
