@@ -73,7 +73,7 @@ impl CloudflareClient {
 
     #[tracing::instrument()]
     pub async fn delete_block_rule(&self, rule_id: String) -> Result<(), ServerError> {
-        info!("Will delete rule id {}: ttl reached", rule_id);
+        info!("Will delete rule id {}", rule_id);
 
         let req = model::DeleteRuleRequest {
             delete_filter_if_unused: true,
@@ -84,6 +84,7 @@ impl CloudflareClient {
             .http_client
             .delete(format!("{}{}", self.base_api_url, path))
             .json(&req)
+            .query(&[("delete_filter_if_unused", true)])
             .send()
             .await?;
         let resp = resp.json::<model::DeleteRuleResponse>().await?;
