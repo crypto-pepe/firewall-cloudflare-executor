@@ -5,8 +5,8 @@ server:
 cloudflare:
   base_url: https://api.cloudflare.com/client/v4/
   token: ""
-  account_id: "6b7610a08ea0b01e6e1211455fbc00e8"
-  zone_id: "82fda96b998b619c821f72ceed55e427"
+  account_id: ""
+  zone_id: ""
   invalidation_timeout: "1s"
 db:
   user: "postgres"
