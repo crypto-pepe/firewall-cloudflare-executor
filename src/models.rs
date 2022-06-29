@@ -68,12 +68,16 @@ pub fn form_firewall_rule_expression(
     let mut ss = vec![];
 
     if ua.is_none() && ip.is_none() {
-        return Err(ServerError::BadRequest("Empty field".into()));
+        return Err(ServerError::BadRequest(
+            "Empty fields, at least one field is required: 'ip', 'user_agent'".into(),
+        ));
     }
 
     if let Some(ua) = ua {
         if !ua.is_empty() {
             ss.push(format!("http.user_agent eq \"{}\"", ua));
+        } else {
+            return Err(ServerError::BadRequest("Empty 'user_agent' field".into()));
         }
     }
 
@@ -82,7 +86,9 @@ pub fn form_firewall_rule_expression(
     }
 
     if ss.is_empty() {
-        return Err(ServerError::BadRequest("Empty fields".into()));
+        return Err(ServerError::BadRequest(
+            "Empty fields, at least one field is required: 'ip', 'user_agent'".into(),
+        ));
     }
 
     Ok(ss.join(SEPARATOR))
