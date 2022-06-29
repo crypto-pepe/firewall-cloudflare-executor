@@ -566,6 +566,7 @@ dependencies = [
  "chrono",
  "diesel",
  "futures",
+ "matches",
  "opentelemetry",
  "opentelemetry-jaeger",
  "pepe-config",

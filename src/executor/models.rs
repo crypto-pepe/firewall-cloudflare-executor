@@ -1,3 +1,5 @@
+use std::net::Ipv4Addr;
+
 use async_trait::async_trait;
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
@@ -19,7 +21,7 @@ pub struct UnblockRequest {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Target {
-    pub ip: Option<String>,
+    pub ip: Option<Ipv4Addr>,
     pub user_agent: Option<String>,
 }
 

@@ -21,6 +21,10 @@ pub enum ServerError {
     WrongLogLevel,
     #[error("Missing dry run status")]
     MissingDryRunStatus,
+    #[error("Target IP is invalid")]
+    BadIP,
+    #[error("Provided request does not match the constraints: {0}")]
+    BadRequest(String),
     #[error("PoolError: {0}")]
     PoolError(String),
     #[error("DB error: {0}")]
@@ -56,6 +60,11 @@ impl From<ServerError> for HttpResponse {
             ServerError::DBError(source) => HttpResponse::InternalServerError().json(
                 handlers::models::ExecutorResponse::internal(source.to_string()),
             ),
+            ServerError::BadIP => {
+                HttpResponse::BadRequest().json(handlers::models::ExecutorResponse::bad_ip())
+            }
+            ServerError::BadRequest(reason) => HttpResponse::BadRequest()
+                .json(handlers::models::ExecutorResponse::bad_request(reason)),
             ServerError::Other(source) => HttpResponse::InternalServerError().json(
                 handlers::models::ExecutorResponse::internal(source.to_string()),
             ),

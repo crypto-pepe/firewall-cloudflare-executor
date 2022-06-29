@@ -31,6 +31,7 @@ impl ExecutorResponse {
             }),
         }
     }
+
     pub fn no_target() -> Self {
         Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
@@ -41,6 +42,7 @@ impl ExecutorResponse {
             }),
         }
     }
+
     pub fn no_ttl() -> Self {
         Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
@@ -51,6 +53,7 @@ impl ExecutorResponse {
             }),
         }
     }
+
     pub fn wrong_log_level() -> Self {
         Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
@@ -61,6 +64,7 @@ impl ExecutorResponse {
             }),
         }
     }
+
     pub fn no_dry_run_status() -> Self {
         Self {
             code: StatusCode::BAD_REQUEST.as_u16(),
@@ -71,6 +75,18 @@ impl ExecutorResponse {
             }),
         }
     }
+
+    pub fn bad_ip() -> Self {
+        Self {
+            code: StatusCode::BAD_REQUEST.as_u16(),
+            reason: String::from("IP address format is incorrect"),
+            details: Some(ErrorDetails {
+                target: Some(String::from("Provided target IP is incorrect")),
+                ttl: None,
+            }),
+        }
+    }
+
     pub fn internal(reason: String) -> Self {
         Self {
             code: StatusCode::INTERNAL_SERVER_ERROR.as_u16(),
@@ -78,6 +94,7 @@ impl ExecutorResponse {
             details: None,
         }
     }
+
     pub fn bad_request(reason: String) -> Self {
         Self {
             code: StatusCode::BAD_REQUEST.as_u16(),

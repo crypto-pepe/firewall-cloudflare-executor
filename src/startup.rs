@@ -1,12 +1,13 @@
 use crate::cloudflare_client::CloudflareClient;
 use crate::configuration;
+use crate::errors;
 use crate::executor;
 use crate::handlers;
 use crate::handlers::bans;
 use crate::pool::DbConn;
 
 use actix_web::dev::Server;
-use actix_web::{web, App, HttpServer};
+use actix_web::{error, web, App, HttpServer};
 use diesel::r2d2::Pool;
 use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
@@ -69,6 +70,13 @@ async fn run(
             .app_data(web::Data::new(executor_service_op.clone()))
             .app_data(web::Data::new(executor_service_dry_run.clone()))
             .app_data(is_dry_run.clone())
+            .app_data(web::JsonConfig::default().error_handler(|e, _req| {
+                error::InternalError::from_response(
+                    "json deserialize",
+                    errors::ServerError::BadRequest(e.to_string()).into(),
+                )
+                .into()
+            }))
     })
     .listen(listener)?
     .run();
