@@ -36,41 +36,25 @@ pub enum ServerError {
 impl From<ServerError> for HttpResponse {
     fn from(v: ServerError) -> Self {
         match v {
-            ServerError::Unsuccessfull { errors } => HttpResponse::InternalServerError().json(
-                handlers::models::ExecutorResponse::internal(
-                    errors.into_iter().collect::<String>(),
-                ),
-            ),
             ServerError::Overflow => HttpResponse::PayloadTooLarge().finish(),
-            ServerError::WrappedErr { cause } => HttpResponse::InternalServerError()
-                .json(handlers::models::ExecutorResponse::internal(cause)),
-            ServerError::PoolError(cause) => HttpResponse::InternalServerError()
-                .json(handlers::models::ExecutorResponse::internal(cause)),
-            ServerError::ClientError(source) => HttpResponse::InternalServerError().json(
-                handlers::models::ExecutorResponse::internal(source.to_string()),
-            ),
-            ServerError::MissingTarget => HttpResponse::BadRequest().json(
-                handlers::models::ExecutorResponse::bad_request("Missing target"),
-            ),
-            ServerError::MissingTTL => HttpResponse::BadRequest().json(
-                handlers::models::ExecutorResponse::bad_request("Missing TTL"),
-            ),
-            ServerError::WrongLogLevel => HttpResponse::BadRequest().json(
-                handlers::models::ExecutorResponse::bad_request("Wrong log level"),
-            ),
-            ServerError::MissingDryRunStatus => HttpResponse::BadRequest().json(
-                handlers::models::ExecutorResponse::bad_request("Missing dry run status"),
-            ),
-            ServerError::DBError(source) => HttpResponse::InternalServerError().json(
-                handlers::models::ExecutorResponse::internal(source.to_string()),
-            ),
-            ServerError::BadIP => HttpResponse::BadRequest()
-                .json(handlers::models::ExecutorResponse::bad_request("Bad IP")),
-            ServerError::BadRequest(reason) => HttpResponse::BadRequest()
-                .json(handlers::models::ExecutorResponse::bad_request(reason)),
-            ServerError::Other(source) => HttpResponse::InternalServerError().json(
-                handlers::models::ExecutorResponse::internal(source.to_string()),
-            ),
+
+            ServerError::Unsuccessfull { errors } => {
+                handlers::models::internal(errors.into_iter().collect::<String>())
+            }
+            ServerError::WrappedErr { cause } => handlers::models::internal(cause),
+            ServerError::PoolError(cause) => handlers::models::internal(cause),
+            ServerError::ClientError(source) => handlers::models::internal(source.to_string()),
+            ServerError::DBError(source) => handlers::models::internal(source.to_string()),
+            ServerError::Other(source) => handlers::models::internal(source.to_string()),
+
+            ServerError::MissingTarget => handlers::models::bad_request("Missing target"),
+            ServerError::MissingTTL => handlers::models::bad_request("Missing TTL"),
+            ServerError::WrongLogLevel => handlers::models::bad_request("Wrong log level"),
+            ServerError::MissingDryRunStatus => {
+                handlers::models::bad_request("Missing dry run status")
+            }
+            ServerError::BadIP => handlers::models::bad_request("Bad IP"),
+            ServerError::BadRequest(reason) => handlers::models::bad_request(reason),
         }
     }
 }

@@ -22,9 +22,7 @@ pub async fn ban_according_to_mode(
     let analyzer_id = match analyzer_id {
         Some(analyzer_id) => analyzer_id,
         None => {
-            return HttpResponse::BadRequest().json(
-                handlers::models::ExecutorResponse::bad_request("Empty X-Analyzer-Id header"),
-            );
+            return handlers::models::bad_request("Empty X-Analyzer-Id header");
         }
     };
     if is_dry_run.load(Ordering::Relaxed) {

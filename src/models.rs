@@ -85,12 +85,6 @@ pub fn form_firewall_rule_expression(
         ss.push(format!("ip.src eq {}", ip));
     }
 
-    if ss.is_empty() {
-        return Err(ServerError::BadRequest(
-            "Empty fields, at least one field is required: 'ip', 'user_agent'".into(),
-        ));
-    }
-
     Ok(ss.join(SEPARATOR))
 }
 
