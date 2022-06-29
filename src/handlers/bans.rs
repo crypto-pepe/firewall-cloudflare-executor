@@ -23,17 +23,13 @@ pub async fn ban_according_to_mode(
         Some(analyzer_id) => analyzer_id,
         None => {
             return HttpResponse::BadRequest()
-                .json(handlers::models::ExecutorResponse::no_analyzer_id());
+                .json(handlers::models::ExecutorResponse::bad_request(""));
         }
     };
     if is_dry_run.load(Ordering::Relaxed) {
-        restriction_result = dry_run_service
-            .ban(block_request, String::from(analyzer_id))
-            .await;
+        restriction_result = dry_run_service.ban(block_request, analyzer_id.into()).await;
     } else {
-        restriction_result = op_service
-            .ban(block_request, String::from(analyzer_id))
-            .await;
+        restriction_result = op_service.ban(block_request, analyzer_id.into()).await;
     }
     match restriction_result {
         Ok(()) => HttpResponse::NoContent().finish(),

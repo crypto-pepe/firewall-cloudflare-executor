@@ -68,7 +68,7 @@ pub fn form_firewall_rule_expression(
     let mut ss = vec![];
 
     if ua.is_none() && ip.is_none() {
-        return Err(ServerError::MissingTarget);
+        return Err(ServerError::BadRequest("Empty field".into()));
     }
 
     if let Some(ua) = ua {
@@ -82,7 +82,7 @@ pub fn form_firewall_rule_expression(
     }
 
     if ss.is_empty() {
-        return Err(ServerError::MissingTarget);
+        return Err(ServerError::BadRequest("Empty fields".into()));
     }
 
     Ok(ss.join(SEPARATOR))
