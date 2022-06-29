@@ -5,6 +5,8 @@ use crate::handlers;
 use actix_web::{web, HttpRequest, HttpResponse};
 use std::sync::atomic::{AtomicBool, Ordering};
 
+const ANALYZER_ID_HEADER: &str = "X-Analyzer-Id";
+
 pub async fn ban_according_to_mode(
     http_req: HttpRequest,
     req: web::Json<executor::models::BlockRequest>,
@@ -22,7 +24,7 @@ pub async fn ban_according_to_mode(
     let analyzer_id = match analyzer_id {
         Some(analyzer_id) => analyzer_id,
         None => {
-            return handlers::models::bad_request("Empty X-Analyzer-Id header");
+            return handlers::models::bad_request(format!("Empty {} header", ANALYZER_ID_HEADER));
         }
     };
     if is_dry_run.load(Ordering::Relaxed) {
@@ -57,5 +59,5 @@ pub async fn unban_according_to_mode(
 }
 
 fn get_x_analyzer_id_header(req: &HttpRequest) -> Option<&str> {
-    req.headers().get("X-Analyzer-Id")?.to_str().ok()
+    req.headers().get(ANALYZER_ID_HEADER)?.to_str().ok()
 }
