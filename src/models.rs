@@ -1,20 +1,9 @@
-use crate::schema::nongratas::{self};
+use crate::schema::nongratas;
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use std::str::FromStr;
 use strum_macros::Display;
-
-#[derive(Serialize)]
-pub struct FirewallRuleRequest {
-    pub action: String,
-    pub filter: Filter,
-}
-
-#[derive(Serialize)]
-pub struct Filter {
-    pub expression: String,
-}
 
 #[derive(Debug, Display, PartialEq, Serialize)]
 #[strum(serialize_all = "lowercase")]
