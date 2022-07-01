@@ -2,7 +2,7 @@ use crate::{errors::ServerError, schema::nongratas};
 
 use chrono::{DateTime, Utc};
 use serde::Serialize;
-use std::{net::Ipv4Addr, str::FromStr};
+use std::{net::IpAddr, str::FromStr};
 use strum_macros::Display;
 
 #[derive(Debug, Display, PartialEq, Serialize)]
@@ -62,7 +62,7 @@ impl Nongrata {
 const SEPARATOR: &str = " and ";
 
 pub fn form_firewall_rule_expression(
-    ip: Option<Ipv4Addr>,
+    ip: Option<IpAddr>,
     ua: Option<String>,
 ) -> Result<String, ServerError> {
     let mut ss = vec![];
@@ -95,7 +95,7 @@ mod tests {
     fn test_form_firewall_rule_expression() {
         assert_eq!(
             form_firewall_rule_expression(
-                Some(Ipv4Addr::from_str("192.168.0.1").unwrap()),
+                Some(IpAddr::from_str("192.168.0.1").unwrap()),
                 Some(String::from(
                     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
                 ))
@@ -104,7 +104,7 @@ mod tests {
         );
 
         assert_eq!(
-            form_firewall_rule_expression(Some(Ipv4Addr::from_str("192.168.0.1").unwrap()), None,)
+            form_firewall_rule_expression(Some(IpAddr::from_str("192.168.0.1").unwrap()), None,)
                 .unwrap(),
             String::from("ip.src eq 192.168.0.1")
         );
