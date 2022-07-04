@@ -1,5 +1,4 @@
 use crate::errors;
-use crate::errors::ServerError;
 use crate::executor::*;
 use crate::models;
 
@@ -26,8 +25,7 @@ impl Executor for ExecutorServiceDryRun {
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
-        let rule = models::form_firewall_rule_expression(ip, ua);
-        rule.clone().ok_or(ServerError::MissingTarget)?;
+        let rule = models::form_firewall_rule_expression(ip, ua)?;
         info!(
             "Going to apply BAN rule: {:?}\n Analyzer: {:?}",
             rule, analyzer_id,
@@ -38,8 +36,7 @@ impl Executor for ExecutorServiceDryRun {
         info!("Incoming request:{:?}", unblock_request);
         let ua = unblock_request.target.user_agent;
         let ip = unblock_request.target.ip;
-        let rule = models::form_firewall_rule_expression(ip, ua);
-        rule.clone().ok_or(ServerError::MissingTarget)?;
+        let rule = models::form_firewall_rule_expression(ip, ua)?;
         info!("Going apply UNBAN rule: {:?}", rule);
         return Ok(());
     }
