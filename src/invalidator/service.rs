@@ -1,12 +1,11 @@
 use crate::pool::DbConn;
-use crate::schema;
 use crate::{cloudflare_client::CloudflareClient, errors::ServerError};
+use crate::{models, schema};
 
 use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::Pool;
 use diesel::r2d2::PooledConnection;
-use futures::future::try_join_all;
 use std::time::Duration;
 use tokio::{task, time};
 
@@ -41,15 +40,19 @@ impl Invalidator {
             .await
             .map_err(|e| ServerError::from(anyhow::anyhow!(e)))?
     }
+
     pub async fn run_untill_stopped(self) -> Result<(), ServerError> {
         self.run().await
     }
+
     pub async fn invalidate(self) -> Result<(), ServerError> {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
-        let rule_ids = schema::nongratas::table
+
+        // select expired entries
+        let nongratas = schema::nongratas::table
             .filter(
                 schema::nongratas::expires_at.le(chrono::DateTime::<Utc>::from_utc(
                     chrono::NaiveDateTime::from_timestamp(
@@ -59,21 +62,37 @@ impl Invalidator {
                     Utc,
                 )),
             )
-            .select(schema::nongratas::rule_id)
-            .load::<String>(&*conn)
+            .load::<models::Nongrata>(&*conn)
             .map_err(ServerError::from)?;
-        let handles = rule_ids
-            .iter()
-            .map(|id| self.cloudflare_client.delete_block_rule(id.clone()));
-        let handles = try_join_all(handles).await?;
-        handles
-            .iter()
-            .zip(rule_ids.clone().iter())
-            .try_for_each(|(_, id)| {
-                diesel::delete(schema::nongratas::table.filter(schema::nongratas::rule_id.eq(id)))
-                    .execute(&*conn)
-                    .map(|_| ())
-                    .map_err(ServerError::from)
-            })
+
+        for target in nongratas {
+            // construct desired raw trim filter
+            let trim_filter = models::Filter::from_expression(
+                target.clone().filter_id,
+                target.clone().restriction_value,
+            );
+
+            // then select corresponding filter
+            let filter = schema::filters::table
+                .filter(schema::filters::id.eq(target.clone().filter_id))
+                .select(schema::filters::all_columns)
+                .first::<models::Filter>(&*conn)
+                .map_err(ServerError::from)?;
+
+            // then update cf filter
+            self.cloudflare_client.update_filter(filter).await?;
+
+            // then update local expression
+            let mut filter =
+                models::Filter::from_expression(target.filter_id, target.restriction_value);
+            filter.trim_expression(trim_filter);
+
+            // then delete nongrata's entry
+            diesel::delete(schema::nongratas::table.filter(schema::nongratas::id.eq(target.id)))
+                .execute(&*conn)
+                .map_err(ServerError::from)?;
+        }
+
+        Ok(())
     }
 }

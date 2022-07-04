@@ -29,6 +29,8 @@ pub enum ServerError {
     PoolError(String),
     #[error("DB error: {0}")]
     DBError(#[from] diesel::result::Error),
+    #[error("Can't merge filters")]
+    WrongFilter,
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }
@@ -41,6 +43,7 @@ impl From<ServerError> for HttpResponse {
             ServerError::Unsuccessfull { errors } => {
                 handlers::models::internal(errors.into_iter().collect::<String>())
             }
+            ServerError::WrongFilter => handlers::models::internal("Cant merge filters"),
             ServerError::WrappedErr { cause } => handlers::models::internal(cause),
             ServerError::PoolError(cause) => handlers::models::internal(cause),
             ServerError::ClientError(source) => handlers::models::internal(source.to_string()),
