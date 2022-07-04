@@ -89,8 +89,7 @@ impl CloudflareClient {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
-            }
-            .into());
+            });
         };
 
         let filters = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
@@ -125,8 +124,7 @@ impl CloudflareClient {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
-            }
-            .into());
+            });
         };
 
         let filters = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {

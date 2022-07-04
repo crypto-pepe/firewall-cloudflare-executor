@@ -85,7 +85,7 @@ impl Invalidator {
             // then update local expression
             let mut filter =
                 models::Filter::from_expression(target.filter_id, target.restriction_value);
-            filter.trim_expression(trim_filter);
+            filter.trim_expression(trim_filter)?;
 
             // then delete nongrata's entry
             diesel::delete(schema::nongratas::table.filter(schema::nongratas::id.eq(target.id)))

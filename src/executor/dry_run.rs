@@ -3,11 +3,11 @@ use crate::errors::ServerError;
 use crate::executor::models::{BlockRequest, Executor, UnblockRequest};
 use crate::models;
 use crate::models::Filter;
-use crate::pool::DbConn;
+
 use async_trait::async_trait;
 use tracing::info;
 
-use diesel::r2d2::PooledConnection;
+
 
 #[derive(Clone, Default)]
 pub struct ExecutorServiceDryRun {}
@@ -45,29 +45,29 @@ impl Executor for ExecutorServiceDryRun {
         return Ok(());
     }
 
-    async fn create_filter(&self, filter: Filter) -> Result<String, ServerError> {
+    async fn create_filter(&self, _filter: Filter) -> Result<String, ServerError> {
         Ok("".to_string())
     }
 
     async fn create_rule(
         &self,
-        block_request: BlockRequest,
-        filter: Filter,
-        analyzer_id: String,
+        _block_request: BlockRequest,
+        _filter: Filter,
+        _analyzer_id: String,
     ) -> Result<(), ServerError> {
         Ok(())
     }
 
     async fn update_filter(
         &self,
-        block_request: BlockRequest,
-        old_filter: Filter,
-        new_filter: Filter,
-        analyzer_id: String,
+        _block_request: BlockRequest,
+        _old_filter: Filter,
+        _new_filter: Filter,
+        _analyzer_id: String,
     ) -> Result<(), ServerError> {
         Ok(())
     }
-    async fn find_filter(&self, filter: Filter) -> Result<Vec<Filter>, ServerError> {
+    async fn find_filter(&self, _filter: Filter) -> Result<Vec<Filter>, ServerError> {
         Ok(vec![])
     }
 }

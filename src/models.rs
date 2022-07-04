@@ -120,7 +120,7 @@ impl Filter {
     pub fn trim_expression(&mut self, trim_filter: Filter) -> Result<(), ServerError> {
         if self.filter_type.to_string() == trim_filter.filter_type.to_string() {
             let trim_expression = format!("or ({})", trim_filter.expression);
-            self.expression.replace(&trim_expression, "");
+            self.expression = self.expression.replace(&trim_expression, "");
             return Ok(());
         }
         Err(ServerError::WrongFilter)
@@ -198,6 +198,7 @@ mod tests {
         );
     }
 
+    #[test]
     fn test_append_filter() {
         let mut filter = Filter::new(
             Some(IpAddr::from_str("192.168.0.1").unwrap()),
@@ -212,7 +213,7 @@ mod tests {
         )
         .unwrap();
 
-        filter.append(filter2);
+        filter.append(filter2).expect("");
 
         assert_eq!(
             filter.expression,

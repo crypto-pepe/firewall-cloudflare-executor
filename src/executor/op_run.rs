@@ -36,7 +36,7 @@ impl Executor for ExecutorService {
     ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request);
 
-        let conn: PooledConnection<DbConn> = self
+        let _conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
@@ -230,7 +230,7 @@ impl Executor for ExecutorService {
             .map_err(ServerError::from)?;
 
         // then trim
-        filter.trim_expression(trim_filter.clone());
+        filter.trim_expression(trim_filter.clone())?;
 
         // then update CF
         self.client.update_filter(filter.clone()).await?;

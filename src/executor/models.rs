@@ -1,13 +1,13 @@
 use std::net::IpAddr;
 
 use async_trait::async_trait;
-use diesel::r2d2::PooledConnection;
+
 use serde_derive::Deserialize;
 use serde_derive::Serialize;
 
 use crate::errors::ServerError;
 use crate::models::Filter;
-use crate::pool::DbConn;
+
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BlockRequest {
