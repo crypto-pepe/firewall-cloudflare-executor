@@ -7,8 +7,6 @@ use crate::models::Filter;
 use async_trait::async_trait;
 use tracing::info;
 
-
-
 #[derive(Clone, Default)]
 pub struct ExecutorServiceDryRun {}
 impl ExecutorServiceDryRun {
@@ -45,8 +43,8 @@ impl Executor for ExecutorServiceDryRun {
         return Ok(());
     }
 
-    async fn create_filter(&self, _filter: Filter) -> Result<String, ServerError> {
-        Ok("".to_string())
+    async fn create_filter(&self, _filter: &mut Filter) -> Result<(), ServerError> {
+        Ok(())
     }
 
     async fn create_rule(
@@ -67,7 +65,7 @@ impl Executor for ExecutorServiceDryRun {
     ) -> Result<(), ServerError> {
         Ok(())
     }
-    async fn find_filter(&self, _filter: Filter) -> Result<Vec<Filter>, ServerError> {
-        Ok(vec![])
+    async fn find_filter(&self, _filter: Filter) -> Result<Option<Filter>, ServerError> {
+        Ok(None)
     }
 }

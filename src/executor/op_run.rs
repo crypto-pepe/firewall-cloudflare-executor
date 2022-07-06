@@ -13,7 +13,7 @@ use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::Pool;
 use diesel::r2d2::PooledConnection;
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(Clone)]
 pub struct ExecutorService {
@@ -42,30 +42,27 @@ impl Executor for ExecutorService {
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
         let rule = block_request.clone();
-        let mut new_filter = Filter::new(rule.target.ip, rule.target.user_agent)?;
+        let new_filter = &mut Filter::new(rule.target.ip, rule.target.user_agent)?;
 
-        let existing_filters = self.find_filter(new_filter.clone()).await?;
-        let existing_filter = existing_filters.first();
+        let existing_filter = self.find_filter(new_filter.clone()).await?;
 
         match existing_filter {
             Some(existing_filter) => {
                 self.update_filter(
                     block_request.clone(),
                     existing_filter.clone(),
-                    new_filter,
+                    new_filter.clone(),
                     analyzer_id,
                 )
                 .await?;
             }
             None => {
                 // Create CF and local filter
-                let filter_id = self.create_filter(new_filter.clone()).await?;
-
-                new_filter.id = filter_id;
+                self.create_filter(new_filter).await?;
 
                 // Create CF and nongrata rule
                 return self
-                    .create_rule(block_request.clone(), new_filter, analyzer_id)
+                    .create_rule(block_request.clone(), new_filter.clone(), analyzer_id)
                     .await;
             }
         }
@@ -73,7 +70,7 @@ impl Executor for ExecutorService {
         Ok(())
     }
 
-    async fn find_filter(&self, filter: Filter) -> Result<Vec<Filter>, ServerError> {
+    async fn find_filter(&self, filter: Filter) -> Result<Option<Filter>, ServerError> {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
@@ -81,17 +78,18 @@ impl Executor for ExecutorService {
         schema::filters::table
             .filter(schema::filters::filter_type.eq(&filter.filter_type))
             .select(schema::filters::table::all_columns())
-            .load::<Filter>(&*conn)
+            .first::<Filter>(&*conn)
+            .optional()
             .map_err(ServerError::from)
     }
 
-    async fn create_filter(&self, filter: Filter) -> Result<String, ServerError> {
+    async fn create_filter(&self, filter: &mut Filter) -> Result<(), ServerError> {
         let conn: PooledConnection<DbConn> = self
             .db_pool
             .get()
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
         // Create CF filter
-        let filter_id = self
+        filter.id = self
             .client
             .create_filter(filter.clone())
             .await
@@ -99,11 +97,11 @@ impl Executor for ExecutorService {
 
         // Create new local filter
         diesel::insert_into(schema::filters::table)
-            .values(filter)
+            .values(filter.clone())
             .execute(&*conn)
             .map_err(ServerError::from)?;
 
-        Ok(filter_id)
+        Ok(())
     }
 
     async fn create_rule(
@@ -135,17 +133,11 @@ impl Executor for ExecutorService {
                 ),
                 Utc,
             ),
-            restriction_type.to_string(),
             filter.expression,
+            restriction_type.to_string(),
             true,
             analyzer_id,
         );
-
-        // Create new nongrata
-        diesel::insert_into(schema::nongratas::table)
-            .values(nongrata)
-            .execute(&*conn)
-            .map_err(ServerError::from)?;
 
         // Set filter CF rule id
         let target = schema::filters::table.filter(schema::filters::id.eq(&filter.id));
@@ -153,6 +145,13 @@ impl Executor for ExecutorService {
             .set(schema::filters::rule_id.eq(rule_id))
             .execute(&*conn)
             .map_err(ServerError::from)?;
+
+        // Create new nongrata
+        diesel::insert_into(schema::nongratas::table)
+            .values(nongrata)
+            .execute(&*conn)
+            .map_err(ServerError::from)?;
+
         Ok(())
     }
 
@@ -168,6 +167,36 @@ impl Executor for ExecutorService {
             .get()
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
         let restriction_type = models::RestrictionType::Block;
+        warn!("{} {}", old_filter.expression, new_filter.expression);
+        if old_filter.already_includes_filter(new_filter.clone())? {
+            // find existing nongrata
+            let existing_nongrata = schema::nongratas::table
+                .filter(schema::nongratas::restriction_value.ilike(new_filter.expression))
+                .first::<models::Nongrata>(&*conn)
+                .map_err(ServerError::from)?;
+
+            let target = schema::nongratas::table
+                .filter(schema::nongratas::id.eq(existing_nongrata.id.unwrap()));
+
+            // update entry
+            diesel::update(target)
+                .set((
+                    schema::nongratas::reason.eq(block_request.clone().reason),
+                    schema::nongratas::analyzer_id.eq(analyzer_id),
+                    schema::nongratas::expires_at.eq(chrono::DateTime::<Utc>::from_utc(
+                        chrono::NaiveDateTime::from_timestamp(
+                            block_request.ttl as i64 + chrono::offset::Utc::now().timestamp(),
+                            0,
+                        ),
+                        Utc,
+                    )),
+                ))
+                .execute(&*conn)
+                .map_err(ServerError::from)?;
+
+            return Ok(());
+        }
+
         old_filter.append(new_filter.clone())?;
 
         // Update CF filter
@@ -194,8 +223,8 @@ impl Executor for ExecutorService {
                 ),
                 Utc,
             ),
-            restriction_type.to_string(),
             new_filter.expression,
+            restriction_type.to_string(),
             true,
             analyzer_id,
         );
@@ -217,38 +246,56 @@ impl Executor for ExecutorService {
             .get()
             .map_err(|e| ServerError::PoolError(e.to_string()))?;
 
-        // Get rule ID by pattern matching
         let trim_filter =
             Filter::new(unblock_request.target.ip, unblock_request.target.user_agent)?;
 
-        let expression_filter = format!("%({})%", trim_filter.expression);
+        // then get existing filter
+        let filter = self.find_filter(trim_filter.clone()).await?;
+        match filter {
+            Some(mut filter) => {
+                // find existing rule
+                let nongrata_id = schema::nongratas::table
+                    .filter(schema::nongratas::restriction_value.ilike(filter.clone().expression))
+                    .select(schema::nongratas::id)
+                    .first::<i64>(&*conn)
+                    .map_err(ServerError::from)?;
 
-        let mut filter = schema::filters::table
-            .filter(schema::filters::expression.ilike(expression_filter))
-            .select(schema::filters::all_columns)
-            .first::<models::Filter>(&*conn)
-            .map_err(ServerError::from)?;
+                filter.trim_expression(trim_filter.clone())?;
 
-        // then trim
-        filter.trim_expression(trim_filter.clone())?;
+                if !filter.clone().is_empty() {
+                    // then update cf filter
+                    self.client.update_filter(filter.clone()).await?;
 
-        // then update CF
-        self.client.update_filter(filter.clone()).await?;
+                    // then update filter's entry
+                    let filter_entry =
+                        schema::filters::table.filter(schema::filters::id.eq(filter.clone().id));
+                    diesel::update(filter_entry)
+                        .set(schema::filters::expression.eq(filter.clone().expression))
+                        .execute(&*conn)
+                        .map_err(ServerError::from)?;
+                } else {
+                    // then delete rule & filter
+                    self.client
+                        .delete_block_rule(filter.clone().rule_id)
+                        .await?;
 
-        // and update local filter
-        let target = schema::filters::table.filter(schema::filters::id.eq(&filter.id));
-        diesel::update(target)
-            .set(schema::filters::expression.eq(filter.clone().expression))
-            .execute(&*conn)
-            .map_err(ServerError::from)?;
+                    // then update filter's entry
+                    let filter_entry =
+                        schema::filters::table.filter(schema::filters::id.eq(filter.clone().id));
+                    diesel::delete(filter_entry)
+                        .execute(&*conn)
+                        .map_err(ServerError::from)?;
+                }
 
-        // then delete nongrata entry
-        diesel::delete(
-            schema::nongratas::table
-                .filter(schema::nongratas::restriction_value.eq(trim_filter.clone().expression)),
-        )
-        .execute(&*conn)
-        .map_err(ServerError::from)?;
+                // then delete nongrata's entry
+                diesel::delete(
+                    schema::nongratas::table.filter(schema::nongratas::id.eq(nongrata_id)),
+                )
+                .execute(&*conn)
+                .map_err(ServerError::from)?;
+            }
+            None => return Err(ServerError::WrongFilter),
+        }
 
         Ok(())
     }

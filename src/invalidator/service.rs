@@ -67,30 +67,51 @@ impl Invalidator {
 
         for target in nongratas {
             // construct desired raw trim filter
-            let trim_filter = models::Filter::from_expression(
+            let mut trim_filter = models::Filter::from_expression(
                 target.clone().filter_id,
                 target.clone().restriction_value,
             );
 
-            // then select corresponding filter
-            let filter = schema::filters::table
+            // then get existing filter
+            let mut filter = schema::filters::table
                 .filter(schema::filters::id.eq(target.clone().filter_id))
                 .select(schema::filters::all_columns)
                 .first::<models::Filter>(&*conn)
                 .map_err(ServerError::from)?;
-
-            // then update cf filter
-            self.cloudflare_client.update_filter(filter).await?;
-
-            // then update local expression
-            let mut filter =
-                models::Filter::from_expression(target.filter_id, target.restriction_value);
-            filter.trim_expression(trim_filter)?;
+            trim_filter.filter_type = filter.clone().filter_type;
 
             // then delete nongrata's entry
-            diesel::delete(schema::nongratas::table.filter(schema::nongratas::id.eq(target.id)))
-                .execute(&*conn)
-                .map_err(ServerError::from)?;
+            diesel::delete(
+                schema::nongratas::table.filter(schema::nongratas::id.eq(target.id.unwrap())),
+            )
+            .execute(&*conn)
+            .map_err(ServerError::from)?;
+
+            filter.trim_expression(trim_filter)?;
+            if !filter.clone().is_empty() {
+                // then update cf filter
+                self.cloudflare_client.update_filter(filter.clone()).await?;
+
+                // then update filter's entry
+                let filter_entry =
+                    schema::filters::table.filter(schema::filters::id.eq(target.filter_id));
+                diesel::update(filter_entry)
+                    .set(schema::filters::expression.eq(filter.expression))
+                    .execute(&*conn)
+                    .map_err(ServerError::from)?;
+            } else {
+                // then delete rule & filter
+                self.cloudflare_client
+                    .delete_block_rule(filter.rule_id)
+                    .await?;
+
+                // then update filter's entry
+                let filter_entry =
+                    schema::filters::table.filter(schema::filters::id.eq(target.filter_id));
+                diesel::delete(filter_entry)
+                    .execute(&*conn)
+                    .map_err(ServerError::from)?;
+            }
         }
 
         Ok(())

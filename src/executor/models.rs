@@ -8,8 +8,8 @@ use serde_derive::Serialize;
 use crate::errors::ServerError;
 use crate::models::Filter;
 
-
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct BlockRequest {
     pub target: Target,
     pub reason: String,
@@ -18,11 +18,13 @@ pub struct BlockRequest {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct UnblockRequest {
     pub target: Target,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Target {
     pub ip: Option<IpAddr>,
     pub user_agent: Option<String>,
@@ -42,8 +44,8 @@ pub trait Executor {
         filter: Filter,
         analyzer_id: String,
     ) -> Result<(), ServerError>;
-    async fn find_filter(&self, filter: Filter) -> Result<Vec<Filter>, ServerError>;
-    async fn create_filter(&self, filter: Filter) -> Result<String, ServerError>;
+    async fn find_filter(&self, filter: Filter) -> Result<Option<Filter>, ServerError>;
+    async fn create_filter(&self, filter: &mut Filter) -> Result<(), ServerError>;
     async fn update_filter(
         &self,
         block_request: BlockRequest,

@@ -109,6 +109,7 @@ impl CloudflareClient {
         filter: models::Filter,
     ) -> Result<String, errors::ServerError> {
         let req = vec![model::UpdateFilterRequest::from(filter)];
+        info!("{:?}", req);
         let path = format!("zones/{}/filters", self.zone_id);
 
         let resp = self
@@ -151,7 +152,7 @@ impl CloudflareClient {
             .query(&[("delete_filter_if_unused", true)])
             .send()
             .await?;
-        let resp = resp.json::<model::CloudflareResponse>().await?;
+        let resp = resp.json::<model::CloudflareResponseSingle>().await?;
         if !resp.success {
             error!("Request was sent, but CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
@@ -170,6 +171,11 @@ mod model {
     pub(super) struct CloudflareResponse {
         pub success: bool,
         pub result: Option<Vec<Object>>,
+        pub errors: Vec<Error>,
+    }
+    #[derive(Deserialize)]
+    pub(super) struct CloudflareResponseSingle {
+        pub success: bool,
         pub errors: Vec<Error>,
     }
 
@@ -208,7 +214,7 @@ mod model {
         }
     }
 
-    #[derive(Serialize)]
+    #[derive(Serialize, Debug)]
     pub struct UpdateFilterRequest {
         pub id: String,
         pub expression: String,

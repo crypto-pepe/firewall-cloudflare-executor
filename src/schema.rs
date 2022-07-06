@@ -11,6 +11,9 @@ table! {
 }
 
 table! {
+    use diesel::sql_types::*;
+    use crate::models::*;
+
     nongratas (id) {
         id -> Int8,
         filter_id -> Text,
@@ -25,4 +28,7 @@ table! {
 
 joinable!(nongratas -> filters (filter_id));
 
-allow_tables_to_appear_in_same_query!(filters, nongratas,);
+allow_tables_to_appear_in_same_query!(
+    filters,
+    nongratas,
+);
