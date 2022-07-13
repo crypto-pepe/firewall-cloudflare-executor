@@ -36,14 +36,8 @@ impl Executor for ExecutorService {
     ) -> Result<(), errors::ServerError> {
         info!("Incoming request:{:?}", block_request);
 
-        let _conn: PooledConnection<DbConn> = self
-            .db_pool
-            .get()
-            .map_err(|e| ServerError::PoolError(e.to_string()))?;
-
         let rule = block_request.clone();
         let new_filter = &mut Filter::new(rule.target.ip, rule.target.user_agent)?;
-
         let existing_filter = self.find_filter(new_filter.clone()).await?;
 
         match existing_filter {
@@ -294,7 +288,7 @@ impl Executor for ExecutorService {
                 .execute(&*conn)
                 .map_err(ServerError::from)?;
             }
-            None => return Err(ServerError::WrongFilter),
+            None => return Err(ServerError::FilterNotFound),
         }
 
         Ok(())

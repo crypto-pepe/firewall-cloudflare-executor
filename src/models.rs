@@ -119,7 +119,10 @@ impl Filter {
             );
             return Ok(());
         }
-        Err(ServerError::WrongFilter)
+        Err(ServerError::MergeFilterError(
+            self.filter_type.to_string(),
+            to_append.filter_type.to_string(),
+        ))
     }
     pub fn trim_expression(&mut self, trim_filter: Filter) -> Result<(), ServerError> {
         if self.filter_type.to_string() == trim_filter.filter_type.to_string() {
@@ -135,7 +138,10 @@ impl Filter {
                 .join(" ");
             return Ok(());
         }
-        Err(ServerError::WrongFilter)
+        Err(ServerError::MergeFilterError(
+            self.filter_type.to_string(),
+            trim_filter.filter_type.to_string(),
+        ))
     }
     pub fn already_includes_filter(&mut self, new_filter: Filter) -> Result<bool, ServerError> {
         if self.filter_type.to_string() == new_filter.filter_type.to_string() {
@@ -145,7 +151,10 @@ impl Filter {
 
             return Ok(contains || equals);
         }
-        Err(ServerError::WrongFilter)
+        Err(ServerError::MergeFilterError(
+            self.filter_type.to_string(),
+            new_filter.filter_type.to_string(),
+        ))
     }
     pub fn is_empty(self) -> bool {
         self.expression.is_empty()

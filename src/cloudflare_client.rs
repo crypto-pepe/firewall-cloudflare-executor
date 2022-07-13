@@ -52,7 +52,7 @@ impl CloudflareClient {
             .json::<model::CloudflareResponse>()
             .await?;
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("create_block_rule: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             }
@@ -86,7 +86,7 @@ impl CloudflareClient {
             .await?;
 
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("create_filter: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             });
@@ -122,7 +122,7 @@ impl CloudflareClient {
             .await?;
 
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("update_filter: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             });
@@ -154,7 +154,7 @@ impl CloudflareClient {
             .await?;
         let resp = resp.json::<model::CloudflareResponseSingle>().await?;
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("delete_block_rule: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             });
