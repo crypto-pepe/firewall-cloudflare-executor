@@ -22,7 +22,15 @@ pub async fn ban_according_to_mode(
     let analyzer_id = get_x_analyzer_id_header(&http_req);
 
     let analyzer_id = match analyzer_id {
-        Some(analyzer_id) => analyzer_id,
+        Some(analyzer_id) => {
+            if analyzer_id.is_empty() {
+                return handlers::models::bad_request(format!(
+                    "Empty {} header",
+                    ANALYZER_ID_HEADER
+                ));
+            }
+            analyzer_id
+        }
         None => {
             return handlers::models::bad_request(format!("Empty {} header", ANALYZER_ID_HEADER));
         }
