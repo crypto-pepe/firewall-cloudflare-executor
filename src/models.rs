@@ -145,7 +145,7 @@ impl Filter {
     }
     pub fn already_includes_filter(&mut self, new_filter: Filter) -> Result<bool, ServerError> {
         if self.filter_type.to_string() == new_filter.filter_type.to_string() {
-            let expression = format!("{}", new_filter.expression.trim());
+            let expression = new_filter.expression.trim().to_string();
             let contains = self.expression.contains(expression.as_str());
             let equals = self.expression == expression;
 
@@ -312,6 +312,6 @@ mod tests {
 
         filter.append(filter2.clone()).expect("");
 
-        assert_eq!(filter.already_includes_filter(filter2).unwrap(), true);
+        assert!(filter.already_includes_filter(filter2).unwrap());
     }
 }
