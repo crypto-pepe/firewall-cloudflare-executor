@@ -1,6 +1,8 @@
 use crate::errors;
-use crate::executor::*;
+use crate::errors::ServerError;
+use crate::executor::models::{BlockRequest, Executor, UnblockRequest};
 use crate::models;
+use crate::models::Filter;
 
 use async_trait::async_trait;
 use tracing::info;
@@ -25,10 +27,10 @@ impl Executor for ExecutorServiceDryRun {
         if block_request.ttl == 0 {
             return Err(errors::ServerError::MissingTTL);
         }
-        let rule = models::form_firewall_rule_expression(ip, ua)?;
+        let filter = models::Filter::new(ip, ua)?;
         info!(
             "Going to apply BAN rule: {:?}\n Analyzer: {:?}",
-            rule, analyzer_id,
+            filter.expression, analyzer_id,
         );
         return Ok(());
     }
@@ -36,8 +38,34 @@ impl Executor for ExecutorServiceDryRun {
         info!("Incoming request:{:?}", unblock_request);
         let ua = unblock_request.target.user_agent;
         let ip = unblock_request.target.ip;
-        let rule = models::form_firewall_rule_expression(ip, ua)?;
-        info!("Going apply UNBAN rule: {:?}", rule);
+        let filter = models::Filter::new(ip, ua)?;
+        info!("Going apply UNBAN rule: {:?}", filter.expression);
         return Ok(());
+    }
+
+    async fn create_filter(&self, _filter: &mut Filter) -> Result<(), ServerError> {
+        Ok(())
+    }
+
+    async fn create_rule(
+        &self,
+        _block_request: BlockRequest,
+        _filter: Filter,
+        _analyzer_id: String,
+    ) -> Result<(), ServerError> {
+        Ok(())
+    }
+
+    async fn update_filter(
+        &self,
+        _block_request: BlockRequest,
+        _old_filter: Filter,
+        _new_filter: Filter,
+        _analyzer_id: String,
+    ) -> Result<(), ServerError> {
+        Ok(())
+    }
+    async fn find_filter(&self, _filter: Filter) -> Result<Option<Filter>, ServerError> {
+        Ok(None)
     }
 }

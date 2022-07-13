@@ -34,14 +34,12 @@ impl CloudflareClient {
     #[tracing::instrument()]
     pub async fn create_block_rule(
         &self,
-        expr: String,
+        filter_id: String,
         restriction_type: models::RestrictionType,
     ) -> Result<String> {
-        info!("Will block globally: {}", expr);
-
         let req = vec![model::CreateRuleRequest {
             action: restriction_type.to_string(),
-            filter: model::Filter { expression: expr },
+            filter: model::Filter { id: filter_id },
         }];
         let path = format!("zones/{}/firewall/rules", self.zone_id);
 
@@ -51,24 +49,95 @@ impl CloudflareClient {
             .json(&req)
             .send()
             .await?
-            .json::<model::CreateRuleResponse>()
+            .json::<model::CloudflareResponse>()
             .await?;
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("create_block_rule: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             }
             .into());
         };
         let rules = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
-            cause: "bad response".to_string(),
+            cause: "create_block_rule bad response: no rules".to_string(),
         })?;
         let rule = rules
             .first()
             .ok_or::<ServerError>(ServerError::WrappedErr {
-                cause: "bad response".to_string(),
+                cause: "create_block_rule bad response: no rule".to_string(),
             })?;
         Ok(rule.id.clone())
+    }
+
+    pub async fn create_filter(
+        &self,
+        filter: models::Filter,
+    ) -> Result<String, errors::ServerError> {
+        let req = vec![model::CreateFilterRequest::from(filter)];
+        let path = format!("zones/{}/filters", self.zone_id);
+
+        let resp = self
+            .http_client
+            .post(format!("{}{}", self.base_api_url, path))
+            .json(&req)
+            .send()
+            .await?
+            .json::<model::CloudflareResponse>()
+            .await?;
+
+        if !resp.success {
+            error!("create_filter: CloudFlare responded with unsuccess");
+            return Err(errors::ServerError::Unsuccessfull {
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
+            });
+        };
+
+        let filters = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+            cause: "create_filter bad response: no filters".to_string(),
+        })?;
+
+        let filter = filters
+            .first()
+            .ok_or::<ServerError>(ServerError::WrappedErr {
+                cause: "create_filter bad response: no filter".to_string(),
+            })?;
+        Ok(filter.id.clone())
+    }
+
+    pub async fn update_filter(
+        &self,
+        filter: models::Filter,
+    ) -> Result<String, errors::ServerError> {
+        let req = vec![model::UpdateFilterRequest::from(filter)];
+        info!("{:?}", req);
+        let path = format!("zones/{}/filters", self.zone_id);
+
+        let resp = self
+            .http_client
+            .put(format!("{}{}", self.base_api_url, path))
+            .json(&req)
+            .send()
+            .await?
+            .json::<model::CloudflareResponse>()
+            .await?;
+
+        if !resp.success {
+            error!("update_filter: CloudFlare responded with unsuccess");
+            return Err(errors::ServerError::Unsuccessfull {
+                errors: resp.errors.into_iter().map(|v| v.message).collect(),
+            });
+        };
+
+        let filters = resp.result.ok_or::<ServerError>(ServerError::WrappedErr {
+            cause: "update_filter bad response: no filters".to_string(),
+        })?;
+
+        let filter = filters
+            .first()
+            .ok_or::<ServerError>(ServerError::WrappedErr {
+                cause: "update_filter bad response: no filter".to_string(),
+            })?;
+        Ok(filter.id.clone())
     }
 
     #[tracing::instrument()]
@@ -83,9 +152,9 @@ impl CloudflareClient {
             .query(&[("delete_filter_if_unused", true)])
             .send()
             .await?;
-        let resp = resp.json::<model::DeleteRuleResponse>().await?;
+        let resp = resp.json::<model::CloudflareResponseSingle>().await?;
         if !resp.success {
-            error!("Request was sent, but CloudFlare responded with unsuccess");
+            error!("delete_block_rule: CloudFlare responded with unsuccess");
             return Err(errors::ServerError::Unsuccessfull {
                 errors: resp.errors.into_iter().map(|v| v.message).collect(),
             });
@@ -95,23 +164,23 @@ impl CloudflareClient {
 }
 
 mod model {
+    use crate::models;
     use serde::{Deserialize, Serialize};
 
     #[derive(Deserialize)]
-    pub(super) struct CreateRuleResponse {
+    pub(super) struct CloudflareResponse {
         pub success: bool,
-        pub result: Option<Vec<Rule>>,
+        pub result: Option<Vec<Object>>,
+        pub errors: Vec<Error>,
+    }
+    #[derive(Deserialize)]
+    pub(super) struct CloudflareResponseSingle {
+        pub success: bool,
         pub errors: Vec<Error>,
     }
 
     #[derive(Deserialize)]
-    pub(super) struct DeleteRuleResponse {
-        pub success: bool,
-        pub errors: Vec<Error>,
-    }
-
-    #[derive(Deserialize)]
-    pub(super) struct Rule {
+    pub(super) struct Object {
         pub id: String,
     }
 
@@ -127,6 +196,36 @@ mod model {
 
     #[derive(Serialize)]
     pub struct Filter {
+        pub id: String,
+    }
+
+    #[derive(Serialize)]
+    pub struct CreateFilterRequest {
         pub expression: String,
+        pub description: String,
+    }
+
+    impl From<models::Filter> for CreateFilterRequest {
+        fn from(filter: models::Filter) -> Self {
+            Self {
+                description: filter.filter_type.to_string(),
+                expression: filter.expression,
+            }
+        }
+    }
+
+    #[derive(Serialize, Debug)]
+    pub struct UpdateFilterRequest {
+        pub id: String,
+        pub expression: String,
+    }
+
+    impl From<models::Filter> for UpdateFilterRequest {
+        fn from(filter: models::Filter) -> Self {
+            Self {
+                id: filter.id,
+                expression: filter.expression,
+            }
+        }
     }
 }

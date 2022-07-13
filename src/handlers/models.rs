@@ -3,6 +3,7 @@ use actix_web::HttpResponse;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct AdminRequest {
     pub dry_run: Option<bool>,
     pub log_level: Option<String>,
